@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ray — ERD Editor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border: rgba(0,0,0,0.10);
+  --border-md: rgba(0,0,0,0.18);
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1e2433;
+    --bg-secondary: #252b3b;
+    --bg-tertiary: #181d2a;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --border: rgba(255,255,255,0.08);
+    --border-md: rgba(255,255,255,0.15);
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: var(--bg-tertiary); }
+body { font-family: var(--font); font-size: 13px; color: var(--text-primary); }
+#app { height: 100vh; display: flex; flex-direction: column; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 3px; }
+
+.toolbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; background: #0273B5; color: white;
+  flex-shrink: 0; user-select: none;
+}
+.toolbar-title { font-weight: 600; font-size: 13px; margin-right: 6px; white-space: nowrap; }
+.toolbar-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 2px; }
+.tb-btn {
+  background: rgba(255,255,255,0.12); color: white;
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
+  padding: 4px 11px; cursor: pointer; font-size: 11px; font-weight: 500;
+  white-space: nowrap; transition: background 0.15s; font-family: var(--font);
+}
+.tb-btn:hover { background: rgba(255,255,255,0.22); }
+.tb-btn.active { background: #FFC107; color: #1a1a1a; border-color: #FFC107; }
+.spacer { flex: 1; }
+
+.main { display: flex; flex: 1; overflow: hidden; }
+.canvas-wrap { flex: 1; overflow: auto; background: var(--bg-tertiary); }
+
+.side-panel {
+  width: 275px; border-left: 1px solid var(--border);
+  overflow-y: auto; background: var(--bg-primary);
+  padding: 14px; display: flex; flex-direction: column;
+  gap: 10px; flex-shrink: 0;
+}
+.panel-label {
+  font-size: 10px; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.panel-title {
+  font-weight: 600; font-size: 14px; color: #0273B5;
+  display: flex; align-items: center; gap: 6px;
+}
+.field-row {
+  border-bottom: 1px solid var(--border);
+  padding: 6px 0; display: flex; align-items: flex-start; gap: 6px;
+}
+.field-inputs { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.inp {
+  padding: 5px 8px; border-radius: 4px;
+  border: 1px solid var(--border-md);
+  background: var(--bg-secondary); color: var(--text-primary);
+  font-size: 12px; width: 100%; outline: none; font-family: var(--font);
+  transition: border-color 0.15s;
+}
+.inp:focus { border-color: #0273B5; }
+.sel {
+  padding: 4px 5px; border-radius: 4px;
+  border: 1px solid var(--border-md);
+  background: var(--bg-secondary); color: var(--text-primary);
+  font-size: 11px; flex: 1; outline: none; font-family: var(--font);
+}
+.row2 { display: flex; gap: 4px; }
+.icon-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 14px; padding: 2px 5px; line-height: 1;
+  color: var(--text-secondary); border-radius: 3px;
+  transition: color 0.15s, background 0.15s;
+}
+.icon-btn:hover { color: #cc3300; background: rgba(204,51,0,0.08); }
+.icon-btn.blue { color: #0273B5; }
+.icon-btn.blue:hover { color: #015a8c; background: rgba(2,115,181,0.1); }
+.action-btn {
+  color: white; border: none; border-radius: 4px;
+  padding: 7px 10px; cursor: pointer; font-size: 12px;
+  font-weight: 500; width: 100%; font-family: var(--font);
+  transition: filter 0.15s;
+}
+.action-btn:hover { filter: brightness(1.1); }
+.add-field-box {
+  background: var(--bg-secondary); border-radius: 6px;
+  padding: 10px; display: flex; flex-direction: column; gap: 6px;
+}
+
+.status-bar {
+  padding: 5px 14px; background: var(--bg-secondary);
+  font-size: 11px; color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+.modal-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal {
+  background: var(--bg-primary); border-radius: 10px; padding: 20px;
+  width: 310px; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.modal-title { font-weight: 600; font-size: 14px; }
+.modal-sub { font-size: 12px; color: var(--text-secondary); }
+.modal-row { display: flex; gap: 8px; }
+
+.erd-root {
+  display: flex; flex-direction: column;
+  height: 100%; position: relative; overflow: hidden;
+}
+
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: var(--text-secondary); font-size: 14px; gap: 10px;
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const { useState, useRef, useEffect, useCallback } = React;
+
+const STORAGE_KEY = 'theray-erd-v1';
+const BOX_W = 220, HDR_H = 28, ROW_H = 20, FPAD = 5;
+const FTYPES = ['uuid','string','int','bigint','bool','json','enum','timestamp','float','text'];
+const CONS   = ['','PK','FK','FK nullable','UNIQUE','NOT NULL','INDEX'];
+
+function bh(fields) { return HDR_H + fields.length * ROW_H + FPAD * 2; }
+
+function edgePt(e, side) {
+  const h = bh(e.fields), cx = e.x + BOX_W / 2, cy = e.y + h / 2;
+  if (side === 'left')   return { x: e.x,        y: cy };
+  if (side === 'right')  return { x: e.x + BOX_W, y: cy };
+  if (side === 'top')    return { x: cx, y: e.y };
+  return { x: cx, y: e.y + h };
+}
+
+function pickSides(e1, e2) {
+  const cx1 = e1.x + BOX_W/2, cy1 = e1.y + bh(e1.fields)/2;
+  const cx2 = e2.x + BOX_W/2, cy2 = e2.y + bh(e2.fields)/2;
+  if (Math.abs(cx2-cx1) >= Math.abs(cy2-cy1))
+    return cx2 > cx1 ? ['right','left'] : ['left','right'];
+  return cy2 > cy1 ? ['bottom','top'] : ['top','bottom'];
+}
+
+function relPath(e1, e2) {
+  const [s1,s2] = pickSides(e1, e2);
+  const p1 = edgePt(e1,s1), p2 = edgePt(e2,s2);
+  if ((s1==='left'||s1==='right') && (s2==='left'||s2==='right')) {
+    const mx = (p1.x+p2.x)/2;
+    return `M${p1.x},${p1.y}L${mx},${p1.y}L${mx},${p2.y}L${p2.x},${p2.y}`;
+  }
+  if ((s1==='top'||s1==='bottom') && (s2==='top'||s2==='bottom')) {
+    const my = (p1.y+p2.y)/2;
+    return `M${p1.x},${p1.y}L${p1.x},${my}L${p2.x},${my}L${p2.x},${p2.y}`;
+  }
+  if (s1==='bottom'||s1==='top')
+    return `M${p1.x},${p1.y}L${p1.x},${p2.y}L${p2.x},${p2.y}`;
+  return `M${p1.x},${p1.y}L${p2.x},${p1.y}L${p2.x},${p2.y}`;
+}
+
+function midPt(e1, e2) {
+  const [s1,s2] = pickSides(e1,e2);
+  const p1 = edgePt(e1,s1), p2 = edgePt(e2,s2);
+  return { x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2 };
+}
+
+const cColor = c => c==='PK'?'#0273B5' : c.startsWith('FK')?'#4A8FA8' : '#888';
+
+async function fetchModel() {
+  for (const url of ['./working.json', './default.json']) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return await res.json();
+    } catch(e) {}
+  }
+  return { entities: {}, relationships: [] };
+}
+
+function saveModel(model) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(model)); } catch(e) {}
+}
+
+function App() {
+  const [model,    setModel]    = useState(null);
+  const [selEnt,   setSelEnt]   = useState(null);
+  const [selRel,   setSelRel]   = useState(null);
+  const [mode,     setMode]     = useState('select');
+  const [relSrc,   setRelSrc]   = useState(null);
+  const [drag,     setDrag]     = useState(null);
+  const [newF,     setNewF]     = useState({name:'',type:'string',constraint:''});
+  const [editName, setEditName] = useState(false);
+  const [renameV,  setRenameV]  = useState('');
+  const [showNew,  setShowNew]  = useState(false);
+  const [newEntN,  setNewEntN]  = useState('');
+  const [pendRel,  setPendRel]  = useState(null);
+  const [relLbl,   setRelLbl]   = useState('');
+  const [saved,    setSaved]    = useState(true);
+  const svgRef  = useRef(null);
+  const fileRef = useRef(null);
+
+  // Load on mount: localStorage → working.json → default.json
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) { setModel(JSON.parse(raw)); return; }
+      } catch(e) {}
+      setModel(await fetchModel());
+    })();
+  }, []);
+
+  // Auto-save to localStorage
+  useEffect(() => {
+    if (!model) return;
+    setSaved(false);
+    const t = setTimeout(() => { saveModel(model); setSaved(true); }, 600);
+    return () => clearTimeout(t);
+  }, [model]);
+
+  const svgPt = useCallback(e => {
+    const svg = svgRef.current; if (!svg) return {x:0,y:0};
+    const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+    const t = p.matrixTransform(svg.getScreenCTM().inverse());
+    return {x:t.x, y:t.y};
+  }, []);
+
+  const onEntDown = useCallback((e, name) => {
+    if (mode === 'addRel') {
+      if (!relSrc) { setRelSrc(name); return; }
+      if (relSrc !== name) { setPendRel({from:relSrc,to:name}); setRelLbl(''); setRelSrc(null); setMode('select'); return; }
+    }
+    e.stopPropagation();
+    const {x,y} = svgPt(e);
+    const ent = model.entities[name];
+    setDrag({name, mx:x, my:y, ox:ent.x, oy:ent.y});
+    setSelEnt(name); setSelRel(null); setEditName(false);
+  }, [mode, relSrc, model, svgPt]);
+
+  const onMove = useCallback(e => {
+    if (!drag) return;
+    const {x,y} = svgPt(e);
+    setModel(p => ({...p, entities: {...p.entities, [drag.name]: {
+      ...p.entities[drag.name],
+      x: Math.max(0, drag.ox + (x - drag.mx)),
+      y: Math.max(0, drag.oy + (y - drag.my))
+    }}}));
+  }, [drag, svgPt]);
+
+  const onUp = useCallback(() => setDrag(null), []);
+
+  const updField = useCallback((ent,i,k,v) =>
+    setModel(p => ({...p, entities: {...p.entities, [ent]: {
+      ...p.entities[ent],
+      fields: p.entities[ent].fields.map((f,j) => j===i ? {...f,[k]:v} : f)
+    }}})), []);
+
+  const delField = useCallback((ent,i) =>
+    setModel(p => ({...p, entities: {...p.entities, [ent]: {
+      ...p.entities[ent],
+      fields: p.entities[ent].fields.filter((_,j) => j!==i)
+    }}})), []);
+
+  const addField = useCallback(ent => {
+    if (!newF.name.trim()) return;
+    setModel(p => ({...p, entities: {...p.entities, [ent]: {
+      ...p.entities[ent],
+      fields: [...p.entities[ent].fields, {...newF, name:newF.name.trim()}]
+    }}}));
+    setNewF({name:'',type:'string',constraint:''});
+  }, [newF]);
+
+  const doRename = useCallback(() => {
+    const n = renameV.trim().toUpperCase().replace(/\s+/g,'_');
+    if (!n || n===selEnt || model.entities[n]) return;
+    setModel(p => {
+      const {[selEnt]:ent, ...rest} = p.entities;
+      return { entities: {...rest,[n]:ent},
+               relationships: p.relationships.map(r => ({...r,from:r.from===selEnt?n:r.from,to:r.to===selEnt?n:r.to})) };
+    });
+    setSelEnt(n); setEditName(false);
+  }, [renameV, selEnt, model]);
+
+  const delEnt = useCallback(name => {
+    setModel(p => { const {[name]:_,...rest}=p.entities; return {entities:rest,relationships:p.relationships.filter(r=>r.from!==name&&r.to!==name)}; });
+    setSelEnt(null);
+  }, []);
+
+  const addEnt = useCallback(() => {
+    const n = newEntN.trim().toUpperCase().replace(/\s+/g,'_');
+    if (!n || model.entities[n]) return;
+    setModel(p => ({...p, entities: {...p.entities, [n]: {
+      x: 200+Math.random()*200, y: 200+Math.random()*200,
+      fields: [{name:'id',type:'uuid',constraint:'PK'}]
+    }}}));
+    setNewEntN(''); setShowNew(false); setSelEnt(n);
+  }, [newEntN, model]);
+
+  const confirmRel = useCallback(() => {
+    if (!pendRel) return;
+    setModel(p => ({...p, relationships: [...p.relationships, {id:'r'+Date.now(),from:pendRel.from,to:pendRel.to,label:relLbl||'relates to'}]}));
+    setPendRel(null);
+  }, [pendRel, relLbl]);
+
+  const delRel = useCallback(id => {
+    setModel(p => ({...p, relationships: p.relationships.filter(r=>r.id!==id)}));
+    setSelRel(null);
+  }, []);
+
+  const updRelLbl = useCallback((id,v) =>
+    setModel(p => ({...p, relationships: p.relationships.map(r=>r.id===id?{...r,label:v}:r)})), []);
+
+  const exportJSON = useCallback(() => {
+    const b = new Blob([JSON.stringify(model,null,2)],{type:'application/json'});
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a'); a.href=u; a.download='working.json'; a.click();
+    URL.revokeObjectURL(u);
+  }, [model]);
+
+  const importJSON = useCallback(e => {
+    const f = e.target.files?.[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ev => { try { const p=JSON.parse(ev.target.result); if(p.entities&&p.relationships){setModel(p);setSelEnt(null);setSelRel(null);} } catch{alert('Invalid JSON file');} };
+    r.readAsText(f); e.target.value='';
+  }, []);
+
+  const resetToDefault = useCallback(async () => {
+    if (!window.confirm('Reset to default model? Your local changes will be lost.')) return;
+    try {
+      const res = await fetch('./default.json');
+      if (res.ok) {
+        localStorage.removeItem(STORAGE_KEY);
+        setModel(await res.json());
+        setSelEnt(null); setSelRel(null);
+        return;
+      }
+    } catch(e) {}
+    alert('Could not load default.json');
+  }, []);
+
+  const loadFromRepo = useCallback(async () => {
+    if (!window.confirm('Load latest from repo (working.json)? Your local session changes will be lost.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    setModel(null);
+    setSelEnt(null); setSelRel(null);
+    setModel(await fetchModel());
+  }, []);
+
+  if (!model) {
+    return React.createElement('div', {className:'loading'}, 'Loading ERD…');
+  }
+
+  const selEntData = selEnt ? model.entities[selEnt] : null;
+  const selRelData = selRel ? model.relationships.find(r=>r.id===selRel) : null;
+  const CW = 1600, CH = 1600;
+
+  const e = React.createElement;
+
+  return e('div',{className:'erd-root'},
+    // Toolbar
+    e('div',{className:'toolbar'},
+      e('span',{className:'toolbar-title'},'The Ray — ERD Editor'),
+      e('div',{className:'toolbar-divider'}),
+      e('button',{className:'tb-btn',onClick:()=>setShowNew(true)},'+ Entity'),
+      e('button',{
+        className:`tb-btn${mode==='addRel'?' active':''}`,
+        onClick:()=>{setMode(m=>m==='addRel'?'select':'addRel');setRelSrc(null);}
+      }, mode==='addRel'?(relSrc?`${relSrc} → click target`:'Click source entity'):'+ Relationship'),
+      e('div',{className:'spacer'}),
+      e('button',{className:'tb-btn',onClick:exportJSON},'↓ Save working.json'),
+      e('button',{className:'tb-btn',onClick:()=>fileRef.current?.click()},'↑ Import JSON'),
+      e('button',{className:'tb-btn',onClick:loadFromRepo},'↻ Load from Repo'),
+      e('button',{className:'tb-btn',onClick:resetToDefault},'↺ Reset to Default'),
+      e('input',{ref:fileRef,type:'file',accept:'.json',onChange:importJSON,style:{display:'none'}})
+    ),
+
+    // Main
+    e('div',{className:'main'},
+      // Canvas
+      e('div',{className:'canvas-wrap'},
+        e('svg',{
+          ref:svgRef, width:CW, height:CH,
+          onMouseMove:onMove, onMouseUp:onUp,
+          onClick:ev=>{if(ev.target===svgRef.current){setSelEnt(null);setSelRel(null);}},
+          style:{cursor:mode==='addRel'?'crosshair':'default',display:'block'}
+        },
+          e('defs',null,
+            e('marker',{id:'arr',viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'6',markerHeight:'6',orient:'auto'},
+              e('path',{d:'M1 1L9 5L1 9',fill:'none',stroke:'#8BB8CC',strokeWidth:'1.5',strokeLinecap:'round',strokeLinejoin:'round'})),
+            e('marker',{id:'arr-s',viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'6',markerHeight:'6',orient:'auto'},
+              e('path',{d:'M1 1L9 5L1 9',fill:'none',stroke:'#0273B5',strokeWidth:'1.5',strokeLinecap:'round',strokeLinejoin:'round'}))
+          ),
+
+          // Relationships
+          ...model.relationships.map(rel => {
+            const e1=model.entities[rel.from], e2=model.entities[rel.to];
+            if (!e1||!e2) return null;
+            const d=relPath(e1,e2), mid=midPt(e1,e2), sel=selRel===rel.id;
+            return e('g',{key:rel.id,style:{cursor:'pointer'},onClick:ev=>{ev.stopPropagation();setSelRel(rel.id);setSelEnt(null);}},
+              e('path',{d,fill:'none',stroke:'transparent',strokeWidth:12}),
+              e('path',{d,fill:'none',stroke:sel?'#0273B5':'#8BB8CC',strokeWidth:sel?1.75:1,strokeDasharray:sel?'none':'6 3',markerEnd:`url(#arr${sel?'-s':''})`}),
+              e('rect',{x:mid.x-33,y:mid.y-9,width:66,height:17,rx:4,fill:'#fff',stroke:sel?'#0273B5':'#C5D8E4',strokeWidth:0.75}),
+              e('text',{x:mid.x,y:mid.y+3.5,textAnchor:'middle',fontSize:10,fill:sel?'#0273B5':'#5A7A8A',fontFamily:'var(--font)'},rel.label)
+            );
+          }),
+
+          // Entities
+          ...Object.entries(model.entities).map(([name,ent]) => {
+            const h=bh(ent.fields), sel=selEnt===name, isSrc=relSrc===name;
+            return e('g',{key:name,onMouseDown:ev=>onEntDown(ev,name),style:{cursor:drag?.name===name?'grabbing':'grab',userSelect:'none'}},
+              e('rect',{x:ent.x+3,y:ent.y+3,width:BOX_W,height:h,rx:6,fill:'rgba(0,0,0,0.08)'}),
+              e('rect',{x:ent.x,y:ent.y,width:BOX_W,height:h,rx:6,fill:'#fff',stroke:isSrc?'#FFC107':sel?'#0273B5':'#C5D8E4',strokeWidth:sel||isSrc?2:0.75}),
+              e('rect',{x:ent.x,y:ent.y,width:BOX_W,height:HDR_H,rx:6,fill:isSrc?'#FFC107':'#0273B5'}),
+              e('rect',{x:ent.x,y:ent.y+HDR_H-5,width:BOX_W,height:5,fill:isSrc?'#FFC107':'#0273B5'}),
+              e('text',{x:ent.x+10,y:ent.y+18,fontSize:11,fontWeight:600,fill:'white',fontFamily:'var(--font)'},name),
+              ...ent.fields.map((f,i) => {
+                const fy=ent.y+HDR_H+FPAD+i*ROW_H;
+                return e('g',{key:i},
+                  i%2===1&&e('rect',{x:ent.x+1,y:fy,width:BOX_W-2,height:ROW_H,fill:'rgba(2,115,181,0.04)'}),
+                  f.constraint&&e('text',{x:ent.x+7,y:fy+ROW_H/2+3.5,fontSize:8,fontWeight:700,fill:cColor(f.constraint),fontFamily:'var(--font)'},f.constraint.split(' ')[0]),
+                  e('text',{x:ent.x+34,y:fy+ROW_H/2+3.5,fontSize:10,fill:'#1e293b',fontFamily:'var(--font)'},f.name),
+                  e('text',{x:ent.x+BOX_W-7,y:fy+ROW_H/2+3.5,textAnchor:'end',fontSize:9,fill:'#64748b',fontFamily:'var(--font)',fontStyle:'italic'},f.type)
+                );
+              }),
+              e('rect',{x:ent.x,y:ent.y,width:BOX_W,height:h,rx:6,fill:'none',stroke:isSrc?'#FFC107':sel?'#0273B5':'#C5D8E4',strokeWidth:sel||isSrc?2:0.75})
+            );
+          })
+        )
+      ),
+
+      // Side panel
+      (selEntData||selRelData) && e('div',{className:'side-panel'},
+        selEntData && e(React.Fragment,null,
+          e('div',{className:'panel-label'},'Entity'),
+          editName
+            ? e('div',{style:{display:'flex',gap:4}},
+                e('input',{className:'inp',value:renameV,onChange:ev=>setRenameV(ev.target.value),autoFocus:true,
+                  onKeyDown:ev=>{if(ev.key==='Enter')doRename();if(ev.key==='Escape')setEditName(false);}}),
+                e('button',{style:{background:'#0273B5',color:'white',border:'none',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize:12},onClick:doRename},'OK')
+              )
+            : e('div',{className:'panel-title'},
+                e('span',{style:{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},selEnt),
+                e('button',{className:'icon-btn blue',title:'Rename',onClick:()=>{setEditName(true);setRenameV(selEnt);}},'✎'),
+                e('button',{className:'icon-btn',title:'Delete',onClick:()=>delEnt(selEnt)},'✕')
+              ),
+
+          e('div',{className:'panel-label'},'Fields'),
+
+          ...selEntData.fields.map((f,i) =>
+            e('div',{key:i,className:'field-row'},
+              e('div',{className:'field-inputs'},
+                e('input',{className:'inp',value:f.name,onChange:ev=>updField(selEnt,i,'name',ev.target.value)}),
+                e('div',{className:'row2'},
+                  e('select',{className:'sel',value:f.type,onChange:ev=>updField(selEnt,i,'type',ev.target.value)},
+                    ...FTYPES.map(t=>e('option',{key:t,value:t},t))),
+                  e('select',{className:'sel',value:f.constraint,onChange:ev=>updField(selEnt,i,'constraint',ev.target.value)},
+                    ...CONS.map(c=>e('option',{key:c,value:c},c||'—')))
+                )
+              ),
+              e('button',{className:'icon-btn',onClick:()=>delField(selEnt,i)},'✕')
+            )
+          ),
+
+          e('div',{className:'add-field-box'},
+            e('div',{className:'panel-label'},'Add Field'),
+            e('input',{className:'inp',placeholder:'field_name',value:newF.name,onChange:ev=>setNewF(p=>({...p,name:ev.target.value})),
+              onKeyDown:ev=>ev.key==='Enter'&&addField(selEnt)}),
+            e('div',{className:'row2'},
+              e('select',{className:'sel',value:newF.type,onChange:ev=>setNewF(p=>({...p,type:ev.target.value}))},
+                ...FTYPES.map(t=>e('option',{key:t,value:t},t))),
+              e('select',{className:'sel',value:newF.constraint,onChange:ev=>setNewF(p=>({...p,constraint:ev.target.value}))},
+                ...CONS.map(c=>e('option',{key:c,value:c},c||'—')))
+            ),
+            e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:()=>addField(selEnt)},'+ Add Field')
+          )
+        ),
+
+        selRelData && e(React.Fragment,null,
+          e('div',{className:'panel-label'},'Relationship'),
+          e('div',{className:'panel-title'},`${selRelData.from} → ${selRelData.to}`),
+          e('div',null,
+            e('div',{className:'panel-label',style:{marginBottom:4}},'Label'),
+            e('input',{className:'inp',value:selRelData.label,onChange:ev=>updRelLbl(selRel,ev.target.value)})
+          ),
+          e('button',{className:'action-btn',style:{background:'#cc3300',marginTop:4},onClick:()=>delRel(selRel)},'Delete Relationship')
+        )
+      )
+    ),
+
+    // Status bar
+    e('div',{className:'status-bar'},
+      e('div',{className:'dot',style:{background:saved?'#22c55e':'#f59e0b'}}),
+      e('span',null,saved?'Auto-saved to browser':'Saving…'),
+      e('span',{style:{color:'#0273B5',marginLeft:4}},'· Export "Save working.json" then commit to share with the team'),
+      e('span',{style:{marginLeft:12}},
+        `${Object.keys(model.entities).length} entities · ${model.relationships.length} relationships · drag to reposition · click relationship line to edit`)
+    ),
+
+    // New entity modal
+    showNew && e('div',{className:'modal-overlay'},
+      e('div',{className:'modal'},
+        e('div',{className:'modal-title'},'New Entity'),
+        e('input',{className:'inp',placeholder:'ENTITY_NAME',value:newEntN,onChange:ev=>setNewEntN(ev.target.value),autoFocus:true,
+          onKeyDown:ev=>{if(ev.key==='Enter')addEnt();if(ev.key==='Escape')setShowNew(false);}}),
+        e('div',{className:'modal-row'},
+          e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:addEnt},'Create'),
+          e('button',{className:'action-btn',style:{background:'#888'},onClick:()=>setShowNew(false)},'Cancel')
+        )
+      )
+    ),
+
+    // Add relationship modal
+    pendRel && e('div',{className:'modal-overlay'},
+      e('div',{className:'modal'},
+        e('div',{className:'modal-title'},'Add Relationship'),
+        e('div',{className:'modal-sub'},`${pendRel.from}  →  ${pendRel.to}`),
+        e('input',{className:'inp',placeholder:'label (has, contains, owns…)',value:relLbl,onChange:ev=>setRelLbl(ev.target.value),autoFocus:true,
+          onKeyDown:ev=>{if(ev.key==='Enter')confirmRel();if(ev.key==='Escape')setPendRel(null);}}),
+        e('div',{className:'modal-row'},
+          e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:confirmRel},'Add'),
+          e('button',{className:'action-btn',style:{background:'#888'},onClick:()=>setPendRel(null)},'Cancel')
+        )
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(React.createElement(App));
+</script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+{
+  "entities": {
+    "TENANT": {
+      "x": 540,
+      "y": 40,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "name", "type": "string", "constraint": "" },
+        { "name": "arcgis_portal_url", "type": "string", "constraint": "" },
+        { "name": "wro_service_url", "type": "string", "constraint": "" },
+        { "name": "created_at", "type": "timestamp", "constraint": "" }
+      ]
+    },
+    "USER": {
+      "x": 50,
+      "y": 240,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "tenant_id", "type": "uuid", "constraint": "FK" },
+        { "name": "email", "type": "string", "constraint": "" },
+        { "name": "name", "type": "string", "constraint": "" },
+        { "name": "role", "type": "enum", "constraint": "" },
+        { "name": "created_at", "type": "timestamp", "constraint": "" }
+      ]
+    },
+    "WORKSPACE": {
+      "x": 540,
+      "y": 240,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "tenant_id", "type": "uuid", "constraint": "FK" },
+        { "name": "name", "type": "string", "constraint": "" },
+        { "name": "description", "type": "string", "constraint": "" },
+        { "name": "created_at", "type": "timestamp", "constraint": "" }
+      ]
+    },
+    "DEFAULT_LAYER_SET": {
+      "x": 1080,
+      "y": 40,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "tenant_id", "type": "uuid", "constraint": "FK" },
+        { "name": "analysis_type", "type": "enum", "constraint": "" },
+        { "name": "state_code", "type": "string", "constraint": "" },
+        { "name": "layer_config", "type": "json", "constraint": "" }
+      ]
+    },
+    "WORKSPACE_MEMBER": {
+      "x": 50,
+      "y": 500,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
+        { "name": "user_id", "type": "uuid", "constraint": "FK" },
+        { "name": "role", "type": "enum", "constraint": "" }
+      ]
+    },
+    "WORKSPACE_LAYER": {
+      "x": 310,
+      "y": 500,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
+        { "name": "uploaded_by", "type": "uuid", "constraint": "FK" },
+        { "name": "name", "type": "string", "constraint": "" },
+        { "name": "layer_type", "type": "enum", "constraint": "" },
+        { "name": "blob_path", "type": "string", "constraint": "" },
+        { "name": "service_url", "type": "string", "constraint": "" },
+        { "name": "created_at", "type": "timestamp", "constraint": "" }
+      ]
+    },
+    "PROJECT": {
+      "x": 790,
+      "y": 500,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
+        { "name": "name", "type": "string", "constraint": "" },
+        { "name": "description", "type": "string", "constraint": "" },
+        { "name": "area_of_interest", "type": "json", "constraint": "" },
+        { "name": "saved_state", "type": "json", "constraint": "" },
+        { "name": "created_at", "type": "timestamp", "constraint": "" }
+      ]
+    },
+    "PROJECT_MEMBER": {
+      "x": 1080,
+      "y": 500,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "project_id", "type": "uuid", "constraint": "FK" },
+        { "name": "user_id", "type": "uuid", "constraint": "FK" },
+        { "name": "role", "type": "enum", "constraint": "" }
+      ]
+    },
+    "WORKSPACE_LAYER_PERMISSION": {
+      "x": 50,
+      "y": 790,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "workspace_layer_id", "type": "uuid", "constraint": "FK" },
+        { "name": "project_id", "type": "uuid", "constraint": "FK nullable" },
+        { "name": "user_id", "type": "uuid", "constraint": "FK nullable" },
+        { "name": "granted_by", "type": "uuid", "constraint": "FK" },
+        { "name": "created_at", "type": "timestamp", "constraint": "" }
+      ]
+    },
+    "SCENARIO": {
+      "x": 790,
+      "y": 790,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "project_id", "type": "uuid", "constraint": "FK" },
+        { "name": "name", "type": "string", "constraint": "" },
+        { "name": "analysis_type", "type": "enum", "constraint": "" },
+        { "name": "layer_config", "type": "json", "constraint": "" },
+        { "name": "created_at", "type": "timestamp", "constraint": "" }
+      ]
+    },
+    "SCENARIO_LAYER": {
+      "x": 310,
+      "y": 1060,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "scenario_id", "type": "uuid", "constraint": "FK" },
+        { "name": "workspace_layer_id", "type": "uuid", "constraint": "FK nullable" },
+        { "name": "layer_name", "type": "string", "constraint": "" },
+        { "name": "source_type", "type": "enum", "constraint": "" },
+        { "name": "service_url", "type": "string", "constraint": "" },
+        { "name": "sort_order", "type": "int", "constraint": "" },
+        { "name": "is_active", "type": "bool", "constraint": "" }
+      ]
+    },
+    "ANALYSIS_RUN": {
+      "x": 790,
+      "y": 1060,
+      "fields": [
+        { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "scenario_id", "type": "uuid", "constraint": "FK" },
+        { "name": "name", "type": "string", "constraint": "" },
+        { "name": "status", "type": "enum", "constraint": "" },
+        { "name": "buffer_config", "type": "json", "constraint": "" },
+        { "name": "suitability_config", "type": "json", "constraint": "" },
+        { "name": "weight_config", "type": "json", "constraint": "" },
+        { "name": "result_blob_path", "type": "string", "constraint": "" },
+        { "name": "result_service_url", "type": "string", "constraint": "" },
+        { "name": "created_at", "type": "timestamp", "constraint": "" },
+        { "name": "completed_at", "type": "timestamp", "constraint": "" }
+      ]
+    }
+  },
+  "relationships": [
+    { "id": "r1",  "from": "TENANT",                     "to": "USER",                        "label": "has" },
+    { "id": "r2",  "from": "TENANT",                     "to": "WORKSPACE",                   "label": "owns" },
+    { "id": "r3",  "from": "TENANT",                     "to": "DEFAULT_LAYER_SET",           "label": "configures" },
+    { "id": "r4",  "from": "WORKSPACE",                  "to": "WORKSPACE_MEMBER",            "label": "has" },
+    { "id": "r5",  "from": "WORKSPACE",                  "to": "WORKSPACE_LAYER",             "label": "stores" },
+    { "id": "r6",  "from": "WORKSPACE",                  "to": "PROJECT",                     "label": "contains" },
+    { "id": "r7",  "from": "WORKSPACE_LAYER",            "to": "WORKSPACE_LAYER_PERMISSION",  "label": "grants" },
+    { "id": "r8",  "from": "WORKSPACE_LAYER_PERMISSION", "to": "PROJECT",                     "label": "to project" },
+    { "id": "r9",  "from": "WORKSPACE_LAYER_PERMISSION", "to": "USER",                        "label": "to user" },
+    { "id": "r10", "from": "PROJECT",                    "to": "PROJECT_MEMBER",              "label": "has" },
+    { "id": "r11", "from": "PROJECT",                    "to": "SCENARIO",                    "label": "contains" },
+    { "id": "r12", "from": "SCENARIO",                   "to": "SCENARIO_LAYER",              "label": "inputs" },
+    { "id": "r13", "from": "SCENARIO_LAYER",             "to": "WORKSPACE_LAYER",             "label": "references" },
+    { "id": "r14", "from": "SCENARIO",                   "to": "ANALYSIS_RUN",                "label": "produces" }
+  ]
+}
