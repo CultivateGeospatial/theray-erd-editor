@@ -1,22 +1,10 @@
 {
   "entities": {
-    "TENANT": {
-      "x": 540,
+    "USER": {
+      "x": 50,
       "y": 40,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "arcgis_portal_url", "type": "string", "constraint": "" },
-        { "name": "wro_service_url", "type": "string", "constraint": "" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
-      ]
-    },
-    "USER": {
-      "x": 50,
-      "y": 240,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "tenant_id", "type": "uuid", "constraint": "FK" },
         { "name": "email", "type": "string", "constraint": "" },
         { "name": "name", "type": "string", "constraint": "" },
         { "name": "role", "type": "enum", "constraint": "" },
@@ -25,10 +13,9 @@
     },
     "WORKSPACE": {
       "x": 540,
-      "y": 240,
+      "y": 40,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "tenant_id", "type": "uuid", "constraint": "FK" },
         { "name": "name", "type": "string", "constraint": "" },
         { "name": "description", "type": "string", "constraint": "" },
         { "name": "created_at", "type": "timestamp", "constraint": "" }
@@ -39,7 +26,6 @@
       "y": 40,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "tenant_id", "type": "uuid", "constraint": "FK" },
         { "name": "analysis_type", "type": "enum", "constraint": "" },
         { "name": "state_code", "type": "string", "constraint": "" },
         { "name": "layer_config", "type": "json", "constraint": "" }
@@ -47,7 +33,7 @@
     },
     "WORKSPACE_MEMBER": {
       "x": 50,
-      "y": 500,
+      "y": 300,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
         { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
@@ -57,7 +43,7 @@
     },
     "WORKSPACE_LAYER": {
       "x": 310,
-      "y": 500,
+      "y": 300,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
         { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
@@ -71,7 +57,7 @@
     },
     "PROJECT": {
       "x": 790,
-      "y": 500,
+      "y": 300,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
         { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
@@ -84,7 +70,7 @@
     },
     "PROJECT_MEMBER": {
       "x": 1080,
-      "y": 500,
+      "y": 300,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
         { "name": "project_id", "type": "uuid", "constraint": "FK" },
@@ -94,7 +80,7 @@
     },
     "WORKSPACE_LAYER_PERMISSION": {
       "x": 50,
-      "y": 790,
+      "y": 590,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
         { "name": "workspace_layer_id", "type": "uuid", "constraint": "FK" },
@@ -106,7 +92,7 @@
     },
     "SCENARIO": {
       "x": 790,
-      "y": 790,
+      "y": 590,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
         { "name": "project_id", "type": "uuid", "constraint": "FK" },
@@ -118,7 +104,7 @@
     },
     "SCENARIO_LAYER": {
       "x": 310,
-      "y": 1060,
+      "y": 860,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
         { "name": "scenario_id", "type": "uuid", "constraint": "FK" },
@@ -132,7 +118,7 @@
     },
     "ANALYSIS_RUN": {
       "x": 790,
-      "y": 1060,
+      "y": 860,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
         { "name": "scenario_id", "type": "uuid", "constraint": "FK" },
@@ -149,9 +135,6 @@
     }
   },
   "relationships": [
-    { "id": "r1",  "from": "TENANT",                     "to": "USER",                        "label": "has" },
-    { "id": "r2",  "from": "TENANT",                     "to": "WORKSPACE",                   "label": "owns" },
-    { "id": "r3",  "from": "TENANT",                     "to": "DEFAULT_LAYER_SET",           "label": "configures" },
     { "id": "r4",  "from": "WORKSPACE",                  "to": "WORKSPACE_MEMBER",            "label": "has" },
     { "id": "r5",  "from": "WORKSPACE",                  "to": "WORKSPACE_LAYER",             "label": "stores" },
     { "id": "r6",  "from": "WORKSPACE",                  "to": "PROJECT",                     "label": "contains" },
