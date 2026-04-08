@@ -18,6 +18,8 @@
         { "name": "id", "type": "uuid", "constraint": "PK" },
         { "name": "name", "type": "string", "constraint": "" },
         { "name": "description", "type": "string", "constraint": "" },
+        { "name": "arcgis_portal_url", "type": "string", "constraint": "" },
+        { "name": "wro_service_url", "type": "string", "constraint": "" },
         { "name": "created_at", "type": "timestamp", "constraint": "" }
       ]
     },
