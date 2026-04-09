@@ -142,6 +142,26 @@ body { font-family: var(--font); font-size: 13px; color: var(--text-primary); }
   display: flex; align-items: center; justify-content: center;
   height: 100%; color: var(--text-secondary); font-size: 14px; gap: 10px;
 }
+
+.help-modal {
+  background: var(--bg-primary); border-radius: 10px; padding: 24px 28px;
+  width: 560px; max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  display: flex; flex-direction: column; gap: 18px;
+}
+.help-modal h2 { font-size: 16px; font-weight: 700; color: #0273B5; margin: 0; }
+.help-modal h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-secondary); margin: 0 0 6px 0; }
+.help-modal p  { font-size: 13px; line-height: 1.6; margin: 0; }
+.help-modal ul { font-size: 13px; line-height: 1.7; padding-left: 18px; margin: 0; }
+.help-modal li { margin-bottom: 2px; }
+.help-section { border-top: 1px solid var(--border); padding-top: 14px; }
+.help-badge {
+  display: inline-block; background: var(--bg-secondary);
+  border: 1px solid var(--border-md); border-radius: 4px;
+  padding: 1px 7px; font-size: 11px; font-weight: 600;
+  font-family: var(--font); color: var(--text-primary); white-space: nowrap;
+}
+.help-close-row { display: flex; justify-content: flex-end; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -250,6 +270,7 @@ function App() {
   const [patInput,   setPatInput]   = useState('');
   const [ghStatus,   setGhStatus]   = useState(null); // null | 'saving' | 'ok' | 'error'
   const [ghMsg,      setGhMsg]      = useState('');
+  const [showHelp,   setShowHelp]   = useState(false);
   const svgRef  = useRef(null);
   const fileRef = useRef(null);
 
@@ -448,6 +469,7 @@ function App() {
         disabled: ghStatus==='saving'
       }, ghStatus==='saving' ? 'Saving…' : ghStatus==='ok' ? '✓ Saved to GitHub' : ghStatus==='error' ? '✕ Error — retry?' : '↑ Save to GitHub'),
       e('button',{className:'tb-btn',onClick:()=>{setPatInput(pat);setShowPat(true);},title:'GitHub token settings'},'🔑'),
+      e('button',{className:'tb-btn',onClick:()=>setShowHelp(true),title:'Help'},'?'),
       e('button',{className:'tb-btn',onClick:()=>fileRef.current?.click()},'↓ Export JSON'),
       e('button',{className:'tb-btn',onClick:loadFromRepo},'↻ Load from Repo'),
       e('button',{className:'tb-btn',onClick:resetToDefault},'↺ Reset to Default'),
@@ -586,6 +608,72 @@ function App() {
         e('div',{className:'modal-row'},
           e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:addEnt},'Create'),
           e('button',{className:'action-btn',style:{background:'#888'},onClick:()=>setShowNew(false)},'Cancel')
+        )
+      )
+    ),
+
+    // Help modal
+    showHelp && e('div',{className:'modal-overlay', onClick:()=>setShowHelp(false)},
+      e('div',{className:'help-modal', onClick:ev=>ev.stopPropagation()},
+        e('h2',null,'The Ray — ERD Editor Guide'),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'How saves work'),
+          e('ul',null,
+            e('li',null,e('strong',null,'Auto-save (browser): '),'Every change is saved automatically to your browser\'s local storage. The green dot in the status bar confirms this. It persists across refreshes but is local to your device and browser only — no one else can see it.'),
+            e('li',null,e('strong',null,'Save to GitHub: '),'Clicking ',e('span',{className:'help-badge'},'↑ Save to GitHub'),' commits the current model as ',e('code',null,'working.json'),' directly to the shared repo. This is what the rest of the team sees.'),
+            e('li',null,e('strong',null,'Load from Repo: '),'Clicking ',e('span',{className:'help-badge'},'↻ Load from Repo'),' fetches the latest ',e('code',null,'working.json'),' from the repo, overwriting your local session.'),
+            e('li',null,e('strong',null,'Reset to Default: '),'Restores the original baseline model (',e('code',null,'default.json'),') — use this to start fresh from the canonical schema.')
+          )
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Saving to GitHub (team collaboration)'),
+          e('p',null,'Changes are last-write-wins — if two people save at the same time, the second save overwrites the first. Coordinate with your team before saving.'),
+          e('p',{style:{marginTop:8}},e('strong',null,'To get a GitHub token:')),
+          e('ul',null,
+            e('li',null,'Go to github.com/settings/tokens → Fine-grained tokens → New token'),
+            e('li',null,'Resource owner: ',e('strong',null,'CultivateGeospatial')),
+            e('li',null,'Repository access: Only select repositories → ',e('strong',null,'theray-erd-editor')),
+            e('li',null,'Permissions: Contents → ',e('strong',null,'Read and write')),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'🔑'),' in the toolbar, paste your token, and click Save Token. It\'s stored in your browser only.')
+          )
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Export & import (offline / backup)'),
+          e('ul',null,
+            e('li',null,e('span',{className:'help-badge'},'↓ Export JSON'),' — downloads the current model as a JSON file to your computer.'),
+            e('li',null,e('span',{className:'help-badge'},'↑ Import JSON'),' (via the same button area) — loads a previously exported JSON file back into the editor. Useful for sharing a snapshot or restoring a backup.')
+          )
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Using the canvas'),
+          e('ul',null,
+            e('li',null,e('strong',null,'Drag entities: '),'Click and drag any entity box to reposition it.'),
+            e('li',null,e('strong',null,'Select entity: '),'Click an entity to open its fields in the side panel.'),
+            e('li',null,e('strong',null,'Select relationship: '),'Click a relationship line to edit its label or delete it.'),
+            e('li',null,e('strong',null,'Add entity: '),'Click ',e('span',{className:'help-badge'},'+ Entity'),', enter a name (auto-uppercased), press Enter or Create.'),
+            e('li',null,e('strong',null,'Add relationship: '),'Click ',e('span',{className:'help-badge'},'+ Relationship'),', click the source entity, then click the target entity. Enter a label in the dialog.'),
+            e('li',null,e('strong',null,'Rename entity: '),'Select an entity, click the ✎ pencil icon in the side panel.'),
+            e('li',null,e('strong',null,'Delete entity or relationship: '),'Select it, click the ✕ button in the side panel.'),
+            e('li',null,e('strong',null,'Add field: '),'Select an entity, fill in the Add Field form at the bottom of the side panel and click + Add Field or press Enter.'),
+            e('li',null,e('strong',null,'Edit field: '),'Select an entity — all fields are directly editable in the side panel.'),
+            e('li',null,e('strong',null,'Delete field: '),'Click ✕ on the field row in the side panel.')
+          )
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Field types & constraints'),
+          e('ul',null,
+            e('li',null,e('strong',null,'Types: '),'uuid, string, int, bigint, bool, json, enum, timestamp, float, text'),
+            e('li',null,e('strong',null,'Constraints: '),'PK (primary key), FK (foreign key), FK nullable, UNIQUE, NOT NULL, INDEX')
+          )
+        ),
+
+        e('div',{className:'help-close-row'},
+          e('button',{className:'action-btn',style:{background:'#0273B5',width:'auto',padding:'8px 24px'},onClick:()=>setShowHelp(false)},'Close')
         )
       )
     ),
