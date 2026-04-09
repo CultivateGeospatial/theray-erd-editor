@@ -819,6 +819,34 @@ function App() {
       e('div',{className:'help-modal', onClick:ev=>ev.stopPropagation()},
         e('h2',null,'The Ray — ERD Editor Guide'),
 
+        e('p',null,'A visual tool for designing and sharing The Ray\'s database schema. Edit entities and fields, define relationships, document JSON field shapes, and export SQL scripts — all from the browser.'),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Quick start'),
+          e('p',{style:{marginBottom:6}},e('strong',null,'Without a GitHub token'),' — you can still use the full editor:'),
+          e('ul',null,
+            e('li',null,'Changes auto-save to your browser (green dot = saved locally)'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'Export ▾'),' → ',e('strong',null,'Model JSON'),' to download a snapshot to your computer'),
+            e('li',null,'Share the file with a teammate who can import and push it'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'Export ▾'),' → ',e('strong',null,'SQL'),' to generate a CREATE TABLE script for your database'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'Export ▾'),' → ',e('strong',null,'JSON Definitions'),' to export all documented JSON field shapes')
+          ),
+          e('p',{style:{marginTop:10,marginBottom:6}},e('strong',null,'With a GitHub token (recommended)'),' — saves go directly to the shared repo:'),
+          e('ul',null,
+            e('li',null,'Click ',e('span',{className:'help-badge'},'GitHub ▾'),' → ',e('strong',null,'Set Token'),', paste your PAT, click Save Token'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'GitHub ▾'),' → ',e('strong',null,'Save to GitHub'),' to commit your changes to ',e('code',null,'working.json'),' — instantly visible to the whole team'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'GitHub ▾'),' → ',e('strong',null,'Load from Repo'),' to pull the latest version someone else saved'),
+            e('li',null,'Each person uses their own token — changes are attributed to your GitHub account')
+          ),
+          e('p',{style:{marginTop:10,marginBottom:6}},e('strong',null,'Typical workflow:')),
+          e('ol',{style:{paddingLeft:18,fontSize:13,lineHeight:1.8}},
+            e('li',null,'Open the editor — it loads the latest shared model automatically'),
+            e('li',null,'Add or edit entities, fields, relationships, and JSON shapes'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'GitHub ▾'),' → ',e('strong',null,'Save to GitHub'),' to share with the team'),
+            e('li',null,'When the schema is ready, export a SQL script to scaffold the database')
+          )
+        ),
+
         e('div',{className:'help-section'},
           e('h3',null,'How saves work'),
           e('ul',null,
