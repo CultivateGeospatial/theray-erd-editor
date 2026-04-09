@@ -168,9 +168,8 @@ body { font-family: var(--font); font-size: 13px; color: var(--text-primary); }
   background: #1e2433; color: #e2e8f0;
   border: 1px solid #4A8FA8; border-radius: 6px;
   padding: 10px 12px; font-size: 11px; font-family: monospace;
-  white-space: pre; max-width: 320px; max-height: 240px; overflow: auto;
+  white-space: pre; width: 340px; max-height: 300px; overflow: auto;
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  pointer-events: none;
 }
 .json-tooltip-label {
   font-size: 10px; font-weight: 700; color: #4A8FA8;
@@ -644,9 +643,15 @@ function App() {
                 const fy=ent.y+HDR_H+FPAD+i*ROW_H;
                 const isJson = f.type === 'json';
                 return e('g',{key:i,
-                  onMouseEnter: isJson && f.jsonDef ? ev => setTooltip({x:ev.clientX+14,y:ev.clientY-10,fieldName:`${name}.${f.name}`,def:f.jsonDef}) : undefined,
+                  onMouseEnter: isJson && f.jsonDef ? ev => {
+                    const flipLeft = ev.clientX + 360 > window.innerWidth;
+                    setTooltip({x: flipLeft ? ev.clientX-354 : ev.clientX+14, y:Math.min(ev.clientY-10, window.innerHeight-320), fieldName:`${name}.${f.name}`,def:f.jsonDef});
+                  } : undefined,
                   onMouseLeave: isJson ? () => setTooltip(null) : undefined,
-                  onMouseMove:  isJson && f.jsonDef ? ev => setTooltip(t => t ? {...t,x:ev.clientX+14,y:ev.clientY-10} : t) : undefined,
+                  onMouseMove:  isJson && f.jsonDef ? ev => {
+                    const flipLeft = ev.clientX + 360 > window.innerWidth;
+                    setTooltip(t => t ? {...t, x: flipLeft ? ev.clientX-354 : ev.clientX+14, y:Math.min(ev.clientY-10, window.innerHeight-320)} : t);
+                  } : undefined,
                 },
                   i%2===1&&e('rect',{x:ent.x+1,y:fy,width:BOX_W-2,height:ROW_H,fill:'rgba(2,115,181,0.04)'}),
                   isJson&&e('rect',{x:ent.x+1,y:fy,width:BOX_W-2,height:ROW_H,fill:'rgba(74,143,168,0.08)'}),
@@ -756,7 +761,11 @@ function App() {
     ),
 
     // JSON tooltip
-    tooltip && e('div',{className:'json-tooltip',style:{left:tooltip.x,top:tooltip.y}},
+    tooltip && e('div',{
+      className:'json-tooltip',
+      style:{left:tooltip.x,top:tooltip.y},
+      onMouseLeave:()=>setTooltip(null)
+    },
       e('div',{className:'json-tooltip-label'},tooltip.fieldName),
       tooltip.def
     ),
