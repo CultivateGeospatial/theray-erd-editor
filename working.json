@@ -31,7 +31,7 @@
         { "name": "id", "type": "uuid", "constraint": "PK" },
         { "name": "analysis_type", "type": "enum", "constraint": "" },
         { "name": "state_code", "type": "string", "constraint": "" },
-        { "name": "layer_config", "type": "json", "constraint": "" }
+        { "name": "layer_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"layers\": [\n    {\n      \"name\": \"Slope\",\n      \"service_url\": \"https://portal/rest/services/slope/ImageServer\",\n      \"layer_type\": \"raster\",\n      \"default_weight\": 0.25,\n      \"sort_order\": 1\n    },\n    {\n      \"name\": \"Wetlands\",\n      \"service_url\": \"https://portal/rest/services/wetlands/FeatureServer/0\",\n      \"layer_type\": \"exclusion\",\n      \"default_weight\": 0,\n      \"sort_order\": 2\n    }\n  ]\n}" }
       ]
     },
     "WORKSPACE_MEMBER": {
@@ -66,8 +66,8 @@
         { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
         { "name": "name", "type": "string", "constraint": "" },
         { "name": "description", "type": "string", "constraint": "" },
-        { "name": "area_of_interest", "type": "json", "constraint": "" },
-        { "name": "saved_state", "type": "json", "constraint": "" },
+        { "name": "area_of_interest", "type": "json", "constraint": "", "jsonDef": "{\n  \"type\": \"Polygon\",\n  \"coordinates\": [\n    [\n      [-93.5, 44.8],\n      [-93.0, 44.8],\n      [-93.0, 45.1],\n      [-93.5, 45.1],\n      [-93.5, 44.8]\n    ]\n  ],\n  \"spatialReference\": { \"wkid\": 4326 }\n}" },
+        { "name": "saved_state", "type": "json", "constraint": "", "jsonDef": "{\n  \"map_extent\": {\n    \"xmin\": -93.5, \"ymin\": 44.8,\n    \"xmax\": -93.0, \"ymax\": 45.1\n  },\n  \"zoom_level\": 10,\n  \"active_scenario_id\": \"uuid\",\n  \"visible_layers\": [\"slope\", \"wetlands\"]\n}" },
         { "name": "created_at", "type": "timestamp", "constraint": "" }
       ]
     },
@@ -101,7 +101,7 @@
         { "name": "project_id", "type": "uuid", "constraint": "FK" },
         { "name": "name", "type": "string", "constraint": "" },
         { "name": "analysis_type", "type": "enum", "constraint": "" },
-        { "name": "layer_config", "type": "json", "constraint": "" },
+        { "name": "layer_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"layers\": [\n    {\n      \"workspace_layer_id\": \"uuid\",\n      \"name\": \"Slope\",\n      \"weight\": 0.3,\n      \"is_active\": true,\n      \"sort_order\": 1\n    },\n    {\n      \"workspace_layer_id\": \"uuid\",\n      \"name\": \"Wetlands\",\n      \"weight\": 0,\n      \"is_active\": true,\n      \"sort_order\": 2\n    }\n  ]\n}" },
         { "name": "created_at", "type": "timestamp", "constraint": "" }
       ]
     },
@@ -127,9 +127,9 @@
         { "name": "scenario_id", "type": "uuid", "constraint": "FK" },
         { "name": "name", "type": "string", "constraint": "" },
         { "name": "status", "type": "enum", "constraint": "" },
-        { "name": "buffer_config", "type": "json", "constraint": "" },
-        { "name": "suitability_config", "type": "json", "constraint": "" },
-        { "name": "weight_config", "type": "json", "constraint": "" },
+        { "name": "buffer_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"transmission_line_buffer_ft\": 150,\n  \"road_buffer_ft\": 50,\n  \"wetland_buffer_ft\": 300,\n  \"parcel_boundary_buffer_ft\": 25\n}" },
+        { "name": "suitability_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"min_parcel_acres\": 20,\n  \"max_slope_pct\": 15,\n  \"exclude_flood_zone\": true,\n  \"exclude_wetlands\": true,\n  \"min_suitability_score\": 60\n}" },
+        { "name": "weight_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"layers\": [\n    { \"layer_id\": \"uuid\", \"name\": \"Slope\", \"weight\": 0.30 },\n    { \"layer_id\": \"uuid\", \"name\": \"Wetlands\", \"weight\": 0.25 },\n    { \"layer_id\": \"uuid\", \"name\": \"Proximity to Transmission\", \"weight\": 0.25 },\n    { \"layer_id\": \"uuid\", \"name\": \"Land Cover\", \"weight\": 0.20 }\n  ],\n  \"total_weight\": 1.0\n}" },
         { "name": "result_blob_path", "type": "string", "constraint": "" },
         { "name": "result_service_url", "type": "string", "constraint": "" },
         { "name": "created_at", "type": "timestamp", "constraint": "" },
