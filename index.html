@@ -150,6 +150,9 @@ body { font-family: var(--font); font-size: 13px; color: var(--text-primary); }
 const { useState, useRef, useEffect, useCallback } = React;
 
 const STORAGE_KEY = 'theray-erd-v1';
+const PAT_KEY     = 'theray-erd-pat';
+const GH_REPO     = 'CultivateGeospatial/theray-erd-editor';
+const GH_FILE     = 'working.json';
 const BOX_W = 220, HDR_H = 28, ROW_H = 20, FPAD = 5;
 const FTYPES = ['uuid','string','int','bigint','bool','json','enum','timestamp','float','text'];
 const CONS   = ['','PK','FK','FK nullable','UNIQUE','NOT NULL','INDEX'];
@@ -210,6 +213,23 @@ function saveModel(model) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(model)); } catch(e) {}
 }
 
+async function saveToGitHub(model, pat) {
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(model, null, 2))));
+  // Get current SHA of working.json (needed for updates)
+  const headers = { Authorization: `token ${pat}`, 'Content-Type': 'application/json' };
+  const getRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, { headers });
+  let sha;
+  if (getRes.ok) { const data = await getRes.json(); sha = data.sha; }
+  const body = { message: 'chore: update working.json from ERD Editor', content, ...(sha ? { sha } : {}) };
+  const putRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+    method: 'PUT', headers, body: JSON.stringify(body)
+  });
+  if (!putRes.ok) {
+    const err = await putRes.json();
+    throw new Error(err.message || 'GitHub API error');
+  }
+}
+
 function App() {
   const [model,    setModel]    = useState(null);
   const [selEnt,   setSelEnt]   = useState(null);
@@ -224,7 +244,12 @@ function App() {
   const [newEntN,  setNewEntN]  = useState('');
   const [pendRel,  setPendRel]  = useState(null);
   const [relLbl,   setRelLbl]   = useState('');
-  const [saved,    setSaved]    = useState(true);
+  const [saved,      setSaved]      = useState(true);
+  const [pat,        setPat]        = useState(() => localStorage.getItem(PAT_KEY) || '');
+  const [showPat,    setShowPat]    = useState(false);
+  const [patInput,   setPatInput]   = useState('');
+  const [ghStatus,   setGhStatus]   = useState(null); // null | 'saving' | 'ok' | 'error'
+  const [ghMsg,      setGhMsg]      = useState('');
   const svgRef  = useRef(null);
   const fileRef = useRef(null);
 
@@ -375,6 +400,24 @@ function App() {
     setModel(await fetchModel());
   }, []);
 
+  const savePat = useCallback(() => {
+    const t = patInput.trim();
+    localStorage.setItem(PAT_KEY, t);
+    setPat(t); setPatInput(''); setShowPat(false);
+  }, [patInput]);
+
+  const pushToGitHub = useCallback(async () => {
+    if (!pat) { setShowPat(true); return; }
+    setGhStatus('saving'); setGhMsg('');
+    try {
+      await saveToGitHub(model, pat);
+      setGhStatus('ok'); setGhMsg('Saved to GitHub');
+      setTimeout(() => setGhStatus(null), 3000);
+    } catch(err) {
+      setGhStatus('error'); setGhMsg(err.message);
+    }
+  }, [model, pat]);
+
   if (!model) {
     return React.createElement('div', {className:'loading'}, 'Loading ERD…');
   }
@@ -396,8 +439,16 @@ function App() {
         onClick:()=>{setMode(m=>m==='addRel'?'select':'addRel');setRelSrc(null);}
       }, mode==='addRel'?(relSrc?`${relSrc} → click target`:'Click source entity'):'+ Relationship'),
       e('div',{className:'spacer'}),
-      e('button',{className:'tb-btn',onClick:exportJSON},'↓ Save working.json'),
-      e('button',{className:'tb-btn',onClick:()=>fileRef.current?.click()},'↑ Import JSON'),
+      e('button',{
+        className:'tb-btn',
+        style: ghStatus==='ok' ? {background:'#22c55e',borderColor:'#22c55e',color:'white'} :
+               ghStatus==='error' ? {background:'#cc3300',borderColor:'#cc3300',color:'white'} :
+               ghStatus==='saving' ? {opacity:0.7} : {},
+        onClick: pushToGitHub,
+        disabled: ghStatus==='saving'
+      }, ghStatus==='saving' ? 'Saving…' : ghStatus==='ok' ? '✓ Saved to GitHub' : ghStatus==='error' ? '✕ Error — retry?' : '↑ Save to GitHub'),
+      e('button',{className:'tb-btn',onClick:()=>{setPatInput(pat);setShowPat(true);},title:'GitHub token settings'},'🔑'),
+      e('button',{className:'tb-btn',onClick:()=>fileRef.current?.click()},'↓ Export JSON'),
       e('button',{className:'tb-btn',onClick:loadFromRepo},'↻ Load from Repo'),
       e('button',{className:'tb-btn',onClick:resetToDefault},'↺ Reset to Default'),
       e('input',{ref:fileRef,type:'file',accept:'.json',onChange:importJSON,style:{display:'none'}})
@@ -520,8 +571,9 @@ function App() {
     e('div',{className:'status-bar'},
       e('div',{className:'dot',style:{background:saved?'#22c55e':'#f59e0b'}}),
       e('span',null,saved?'Auto-saved to browser':'Saving…'),
-      e('span',{style:{color:'#0273B5',marginLeft:4}},'· Export "Save working.json" then commit to share with the team'),
-      e('span',{style:{marginLeft:12}},
+      ghStatus==='error' && e('span',{style:{color:'#cc3300',marginLeft:8}},`GitHub error: ${ghMsg}`),
+      !pat && ghStatus!=='error' && e('span',{style:{color:'#f59e0b',marginLeft:8}},'· Set a GitHub token (🔑) to save directly to the repo'),
+      e('span',{style:{marginLeft:'auto'}},
         `${Object.keys(model.entities).length} entities · ${model.relationships.length} relationships · drag to reposition · click relationship line to edit`)
     ),
 
@@ -534,6 +586,21 @@ function App() {
         e('div',{className:'modal-row'},
           e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:addEnt},'Create'),
           e('button',{className:'action-btn',style:{background:'#888'},onClick:()=>setShowNew(false)},'Cancel')
+        )
+      )
+    ),
+
+    // PAT modal
+    showPat && e('div',{className:'modal-overlay'},
+      e('div',{className:'modal'},
+        e('div',{className:'modal-title'},'GitHub Token'),
+        e('div',{className:'modal-sub'},'Create a fine-grained PAT at github.com/settings/tokens with Contents: Read & Write for CultivateGeospatial/theray-erd-editor. Stored in your browser only.'),
+        e('input',{className:'inp',placeholder:'github_pat_…',value:patInput,onChange:ev=>setPatInput(ev.target.value),autoFocus:true,
+          onKeyDown:ev=>{if(ev.key==='Enter')savePat();if(ev.key==='Escape')setShowPat(false);}}),
+        e('div',{className:'modal-row'},
+          e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:savePat},'Save Token'),
+          pat && e('button',{className:'action-btn',style:{background:'#cc3300'},onClick:()=>{localStorage.removeItem(PAT_KEY);setPat('');setShowPat(false);}},'Clear Token'),
+          e('button',{className:'action-btn',style:{background:'#888'},onClick:()=>setShowPat(false)},'Cancel')
         )
       )
     ),
