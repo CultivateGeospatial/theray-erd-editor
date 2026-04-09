@@ -16,6 +16,7 @@
       "y": 40,
       "fields": [
         { "name": "id", "type": "uuid", "constraint": "PK" },
+        { "name": "default_layer_set_id", "type": "uuid", "constraint": "FK" },
         { "name": "name", "type": "string", "constraint": "" },
         { "name": "description", "type": "string", "constraint": "" },
         { "name": "arcgis_portal_url", "type": "string", "constraint": "" },
@@ -137,6 +138,7 @@
     }
   },
   "relationships": [
+    { "id": "r3",  "from": "WORKSPACE",                  "to": "DEFAULT_LAYER_SET",           "label": "initialized from" },
     { "id": "r4",  "from": "WORKSPACE",                  "to": "WORKSPACE_MEMBER",            "label": "has" },
     { "id": "r5",  "from": "WORKSPACE",                  "to": "WORKSPACE_LAYER",             "label": "stores" },
     { "id": "r6",  "from": "WORKSPACE",                  "to": "PROJECT",                     "label": "contains" },
