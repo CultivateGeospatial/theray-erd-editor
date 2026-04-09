@@ -532,6 +532,9 @@ function App() {
 
       // Side panel
       (selEntData||selRelData) && e('div',{className:'side-panel'},
+        e('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:4}},
+          e('button',{className:'icon-btn',title:'Close panel',style:{fontSize:16},onClick:()=>{setSelEnt(null);setSelRel(null);}},'→')
+        ),
         selEntData && e(React.Fragment,null,
           e('div',{className:'panel-label'},'Entity'),
           editName
@@ -543,7 +546,7 @@ function App() {
             : e('div',{className:'panel-title'},
                 e('span',{style:{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},selEnt),
                 e('button',{className:'icon-btn blue',title:'Rename',onClick:()=>{setEditName(true);setRenameV(selEnt);}},'✎'),
-                e('button',{className:'icon-btn',title:'Delete',onClick:()=>delEnt(selEnt)},'✕')
+                e('button',{className:'icon-btn',title:'Delete entity',onClick:()=>delEnt(selEnt)},'🗑')
               ),
 
           e('div',{className:'panel-label'},'Fields'),
@@ -559,7 +562,7 @@ function App() {
                     ...CONS.map(c=>e('option',{key:c,value:c},c||'—')))
                 )
               ),
-              e('button',{className:'icon-btn',onClick:()=>delField(selEnt,i)},'✕')
+              e('button',{className:'icon-btn',title:'Delete field',onClick:()=>delField(selEnt,i)},'🗑')
             )
           ),
 
