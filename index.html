@@ -544,7 +544,8 @@ function App() {
     const defs = {};
     Object.entries(model.entities).forEach(([name, ent]) => {
       ent.fields.filter(f => f.type === 'json' && f.jsonDef).forEach(f => {
-        defs[`${name}.${f.name}`] = f.jsonDef;
+        try { defs[`${name}.${f.name}`] = JSON.parse(f.jsonDef); }
+        catch { defs[`${name}.${f.name}`] = f.jsonDef; }
       });
     });
     const b = new Blob([JSON.stringify(defs, null, 2)], {type:'application/json'});
