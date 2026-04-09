@@ -371,6 +371,7 @@ function App() {
   const [showHelp,   setShowHelp]   = useState(false);
   const [showSqlMenu,setShowSqlMenu]= useState(false);
   const [tooltip,    setTooltip]    = useState(null); // {x,y,fieldName,def}
+  const tooltipHideTimer = useRef(null);
   const svgRef  = useRef(null);
   const fileRef = useRef(null);
 
@@ -647,7 +648,7 @@ function App() {
                     const flipLeft = ev.clientX + 360 > window.innerWidth;
                     setTooltip({x: flipLeft ? ev.clientX-354 : ev.clientX+14, y:Math.min(ev.clientY-10, window.innerHeight-320), fieldName:`${name}.${f.name}`,def:f.jsonDef});
                   } : undefined,
-                  onMouseLeave: isJson ? () => setTooltip(null) : undefined,
+                  onMouseLeave: isJson ? () => { tooltipHideTimer.current = setTimeout(() => setTooltip(null), 120); } : undefined,
                   onMouseMove:  isJson && f.jsonDef ? ev => {
                     const flipLeft = ev.clientX + 360 > window.innerWidth;
                     setTooltip(t => t ? {...t, x: flipLeft ? ev.clientX-354 : ev.clientX+14, y:Math.min(ev.clientY-10, window.innerHeight-320)} : t);
@@ -764,6 +765,7 @@ function App() {
     tooltip && e('div',{
       className:'json-tooltip',
       style:{left:tooltip.x,top:tooltip.y},
+      onMouseEnter:()=>clearTimeout(tooltipHideTimer.current),
       onMouseLeave:()=>setTooltip(null)
     },
       e('div',{className:'json-tooltip-label'},tooltip.fieldName),
