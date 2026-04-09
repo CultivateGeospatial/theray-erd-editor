@@ -897,6 +897,31 @@ function App() {
         ),
 
         e('div',{className:'help-section'},
+          e('h3',null,'Relationships & labels'),
+          e('p',null,'Relationships are drawn as dashed arrows between entities. Each has a short label describing the nature of the association. Labels are documentation only — they have no effect on the SQL export or runtime behavior.'),
+          e('p',{style:{marginTop:8}},e('strong',null,'Adding a relationship:')),
+          e('ul',{style:{marginTop:4}},
+            e('li',null,'Click ',e('span',{className:'help-badge'},'+ Relationship'),' in the toolbar (button turns yellow)'),
+            e('li',null,'Click the source entity, then click the target entity'),
+            e('li',null,'A dialog appears — type or select a label, then click Add')
+          ),
+          e('p',{style:{marginTop:8}},e('strong',null,'Suggested labels and what they mean:')),
+          e('ul',{style:{marginTop:4}},
+            e('li',null,e('strong',null,'has'),' — parent owns child records (Workspace has Members)'),
+            e('li',null,e('strong',null,'owns'),' — strong ownership, child cannot exist without parent'),
+            e('li',null,e('strong',null,'contains'),' — parent groups child entities (Project contains Scenarios)'),
+            e('li',null,e('strong',null,'belongs to'),' — child references a parent (inverse of has/contains)'),
+            e('li',null,e('strong',null,'references'),' — weak link, child points to another entity optionally'),
+            e('li',null,e('strong',null,'produces'),' — one entity creates/generates another (Scenario produces Run)'),
+            e('li',null,e('strong',null,'initialized from'),' — entity is seeded or configured from another'),
+            e('li',null,e('strong',null,'grants'),' — permission or access is given to another entity'),
+            e('li',null,e('strong',null,'stores'),' — one entity is the container for another\'s data'),
+            e('li',null,e('strong',null,'inputs'),' — one entity provides data consumed by another')
+          ),
+          e('p',{style:{marginTop:8,color:'#64748b'}},'You can also type a custom label — the suggestions are a starting point, not a fixed list.')
+        ),
+
+        e('div',{className:'help-section'},
           e('h3',null,'JSON field shapes'),
           e('p',null,'Fields typed as ',e('code',null,'json'),' are highlighted in teal on the canvas. You can document the expected JSON structure for each one so the team has a shared reference while designing.'),
           e('p',{style:{marginTop:8}},e('strong',null,'Defining a shape:')),
@@ -911,15 +936,16 @@ function App() {
             e('li',null,'Hover any teal-highlighted json field row on the canvas to see a tooltip with the field name and defined shape'),
             e('li',null,'Fields with no shape defined show no tooltip — the teal highlight still indicates the field is json type')
           ),
-          e('p',{style:{marginTop:8}},e('strong',null,'Current JSON fields in this model:')),
+          e('p',{style:{marginTop:8}},e('strong',null,'JSON fields currently in this model:')),
           e('ul',{style:{marginTop:4}},
-            e('li',null,e('strong',null,'DEFAULT_LAYER_SET.layer_config'),' — array of default raster/exclusion layers with service URLs, weights, and sort order'),
-            e('li',null,e('strong',null,'PROJECT.area_of_interest'),' — GeoJSON Polygon defining the project study area boundary'),
-            e('li',null,e('strong',null,'PROJECT.saved_state'),' — persisted map state (extent, zoom, active scenario, visible layers)'),
-            e('li',null,e('strong',null,'SCENARIO.layer_config'),' — per-scenario layer overrides with weights applied to the WRO service'),
-            e('li',null,e('strong',null,'ANALYSIS_RUN.buffer_config'),' — buffer distances (ft) per feature type (roads, wetlands, transmission lines, parcels)'),
-            e('li',null,e('strong',null,'ANALYSIS_RUN.suitability_config'),' — suitability thresholds: min acreage, max slope %, exclusion flags, min score'),
-            e('li',null,e('strong',null,'ANALYSIS_RUN.weight_config'),' — named layers with weights that sum to 1.0, sent to the WRO service at run time')
+            ...Object.entries(model.entities).flatMap(([ename, ent]) =>
+              ent.fields.filter(f => f.type === 'json').map(f =>
+                e('li',{key:`${ename}.${f.name}`},
+                  e('strong',null,`${ename}.${f.name}`),
+                  f.jsonDef ? ' — hover on canvas to preview shape' : e('span',{style:{color:'#f59e0b'}},' — no shape defined yet')
+                )
+              )
+            )
           ),
           e('p',{style:{marginTop:8,color:'#f59e0b'}},e('strong',null,'Note: '),'JSON shapes are documentation only — they are not validated at runtime and are excluded from SQL export scripts.')
         ),
@@ -958,8 +984,17 @@ function App() {
       e('div',{className:'modal'},
         e('div',{className:'modal-title'},'Add Relationship'),
         e('div',{className:'modal-sub'},`${pendRel.from}  →  ${pendRel.to}`),
-        e('input',{className:'inp',placeholder:'label (has, contains, owns…)',value:relLbl,onChange:ev=>setRelLbl(ev.target.value),autoFocus:true,
-          onKeyDown:ev=>{if(ev.key==='Enter')confirmRel();if(ev.key==='Escape')setPendRel(null);}}),
+        e('input',{
+          className:'inp', list:'rel-suggestions',
+          placeholder:'has, contains, owns…',
+          value:relLbl, onChange:ev=>setRelLbl(ev.target.value), autoFocus:true,
+          onKeyDown:ev=>{if(ev.key==='Enter')confirmRel();if(ev.key==='Escape')setPendRel(null);}
+        }),
+        e('datalist',{id:'rel-suggestions'},
+          ['has','owns','contains','belongs to','references','produces',
+           'initialized from','grants','stores','inputs','relates to',
+           'manages','assigns','links to','triggers','depends on'].map(s=>e('option',{key:s,value:s}))
+        ),
         e('div',{className:'modal-row'},
           e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:confirmRel},'Add'),
           e('button',{className:'action-btn',style:{background:'#888'},onClick:()=>setPendRel(null)},'Cancel')
