@@ -368,8 +368,10 @@ function App() {
   const [patInput,   setPatInput]   = useState('');
   const [ghStatus,   setGhStatus]   = useState(null); // null | 'saving' | 'ok' | 'error'
   const [ghMsg,      setGhMsg]      = useState('');
-  const [showHelp,   setShowHelp]   = useState(false);
-  const [showSqlMenu,setShowSqlMenu]= useState(false);
+  const [showHelp,      setShowHelp]      = useState(false);
+  const [showExportMenu,setShowExportMenu]= useState(false);
+  const [showImportMenu,setShowImportMenu]= useState(false);
+  const [showGhMenu,    setShowGhMenu]    = useState(false);
   const [tooltip,    setTooltip]    = useState(null); // {x,y,fieldName,def}
   const tooltipHideTimer = useRef(null);
   const svgRef  = useRef(null);
@@ -538,6 +540,24 @@ function App() {
     setShowSqlMenu(false);
   }, [model]);
 
+  const exportJsonDefs = useCallback(() => {
+    const defs = {};
+    Object.entries(model.entities).forEach(([name, ent]) => {
+      ent.fields.filter(f => f.type === 'json' && f.jsonDef).forEach(f => {
+        defs[`${name}.${f.name}`] = f.jsonDef;
+      });
+    });
+    const b = new Blob([JSON.stringify(defs, null, 2)], {type:'application/json'});
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a'); a.href=u; a.download='theray_json_definitions.json'; a.click();
+    URL.revokeObjectURL(u);
+    setShowExportMenu(false);
+  }, [model]);
+
+  const closeAllMenus = useCallback(() => {
+    setShowExportMenu(false); setShowImportMenu(false); setShowGhMenu(false);
+  }, []);
+
   const pushToGitHub = useCallback(async () => {
     if (!pat) { setShowPat(true); return; }
     setGhStatus('saving'); setGhMsg('');
@@ -560,9 +580,18 @@ function App() {
 
   const e = React.createElement;
 
-  return e('div',{className:'erd-root'},
+  const ddMenu = (items) => e('div',{style:{
+    position:'absolute',top:'calc(100% + 4px)',right:0,
+    background:'#015a8c',border:'1px solid rgba(255,255,255,0.2)',
+    borderRadius:4,overflow:'hidden',zIndex:100,minWidth:180,boxShadow:'0 4px 12px rgba(0,0,0,0.3)'
+  }}, ...items.map((item,i) => item === '---'
+    ? e('div',{key:i,style:{height:1,background:'rgba(255,255,255,0.15)',margin:'2px 0'}})
+    : e('button',{key:i,className:'tb-btn',style:{display:'block',width:'100%',borderRadius:0,border:'none',textAlign:'left',padding:'8px 14px'},onClick:item.action},item.label)
+  ));
+
+  return e('div',{className:'erd-root', onClick: closeAllMenus},
     // Toolbar
-    e('div',{className:'toolbar'},
+    e('div',{className:'toolbar', onClick:ev=>ev.stopPropagation()},
       e('span',{className:'toolbar-title'},'The Ray — ERD Editor'),
       e('div',{className:'toolbar-divider'}),
       e('button',{className:'tb-btn',onClick:()=>setShowNew(true)},'+ Entity'),
@@ -571,33 +600,45 @@ function App() {
         onClick:()=>{setMode(m=>m==='addRel'?'select':'addRel');setRelSrc(null);}
       }, mode==='addRel'?(relSrc?`${relSrc} → click target`:'Click source entity'):'+ Relationship'),
       e('div',{className:'spacer'}),
-      e('button',{
-        className:'tb-btn',
-        style: ghStatus==='ok' ? {background:'#22c55e',borderColor:'#22c55e',color:'white'} :
-               ghStatus==='error' ? {background:'#cc3300',borderColor:'#cc3300',color:'white'} :
-               ghStatus==='saving' ? {opacity:0.7} : {},
-        onClick: pushToGitHub,
-        disabled: ghStatus==='saving'
-      }, ghStatus==='saving' ? 'Saving…' : ghStatus==='ok' ? '✓ Saved to GitHub' : ghStatus==='error' ? '✕ Error — retry?' : '↑ Save to GitHub'),
-      e('button',{className:'tb-btn',onClick:()=>{setPatInput(pat);setShowPat(true);},title:'GitHub token settings'},'🔑'),
-      e('button',{className:'tb-btn',onClick:()=>setShowHelp(true),title:'Help'},'?'),
+
+      // Export dropdown
       e('div',{style:{position:'relative'}},
-        e('button',{className:'tb-btn',onClick:()=>setShowSqlMenu(m=>!m)},'↓ Export SQL ▾'),
-        showSqlMenu && e('div',{style:{
-          position:'absolute',top:'calc(100% + 4px)',right:0,
-          background:'#015a8c',border:'1px solid rgba(255,255,255,0.2)',
-          borderRadius:4,overflow:'hidden',zIndex:100,minWidth:160,boxShadow:'0 4px 12px rgba(0,0,0,0.3)'
-        }},
-          e('button',{className:'tb-btn',style:{display:'block',width:'100%',borderRadius:0,border:'none',borderBottom:'1px solid rgba(255,255,255,0.15)',textAlign:'left',padding:'8px 12px'},
-            onClick:()=>exportSQL('mssql')},'MS SQL Server'),
-          e('button',{className:'tb-btn',style:{display:'block',width:'100%',borderRadius:0,border:'none',textAlign:'left',padding:'8px 12px'},
-            onClick:()=>exportSQL('postgres')},'PostgreSQL')
-        )
+        e('button',{className:'tb-btn',onClick:ev=>{ev.stopPropagation();setShowExportMenu(m=>!m);setShowImportMenu(false);setShowGhMenu(false);}},'Export ▾'),
+        showExportMenu && ddMenu([
+          {label:'↓ Model JSON',       action:()=>{exportJSON();setShowExportMenu(false);}},
+          {label:'↓ JSON Definitions', action:exportJsonDefs},
+          '---',
+          {label:'↓ SQL — MS SQL Server', action:()=>exportSQL('mssql')},
+          {label:'↓ SQL — PostgreSQL',    action:()=>exportSQL('postgres')},
+        ])
       ),
-      e('button',{className:'tb-btn',onClick:exportJSON},'↓ Export JSON'),
-      e('button',{className:'tb-btn',onClick:()=>fileRef.current?.click()},'↑ Import JSON'),
-      e('button',{className:'tb-btn',onClick:loadFromRepo},'↻ Load from Repo'),
-      e('button',{className:'tb-btn',onClick:resetToDefault},'↺ Reset to Default'),
+
+      // Import dropdown
+      e('div',{style:{position:'relative'}},
+        e('button',{className:'tb-btn',onClick:ev=>{ev.stopPropagation();setShowImportMenu(m=>!m);setShowExportMenu(false);setShowGhMenu(false);}},'Import ▾'),
+        showImportMenu && ddMenu([
+          {label:'↑ Import JSON', action:()=>{fileRef.current?.click();setShowImportMenu(false);}},
+        ])
+      ),
+
+      // GitHub dropdown
+      e('div',{style:{position:'relative'}},
+        e('button',{
+          className:'tb-btn',
+          style: ghStatus==='ok' ? {background:'#22c55e',borderColor:'#22c55e'} :
+                 ghStatus==='error' ? {background:'#cc3300',borderColor:'#cc3300'} : {},
+          onClick:ev=>{ev.stopPropagation();setShowGhMenu(m=>!m);setShowExportMenu(false);setShowImportMenu(false);}
+        }, ghStatus==='ok' ? '✓ GitHub ▾' : ghStatus==='error' ? '✕ GitHub ▾' : 'GitHub ▾'),
+        showGhMenu && ddMenu([
+          {label: ghStatus==='saving' ? 'Saving…' : '↑ Save to GitHub', action:()=>{pushToGitHub();setShowGhMenu(false);}},
+          {label:'↻ Load from Repo',   action:()=>{loadFromRepo();setShowGhMenu(false);}},
+          {label:'↺ Reset to Default', action:()=>{resetToDefault();setShowGhMenu(false);}},
+          '---',
+          {label:'🔑 Set Token',       action:()=>{setPatInput(pat);setShowPat(true);setShowGhMenu(false);}},
+        ])
+      ),
+
+      e('button',{className:'tb-btn',onClick:()=>setShowHelp(true)},'?'),
       e('input',{ref:fileRef,type:'file',accept:'.json',onChange:importJSON,style:{display:'none'}})
     ),
 
