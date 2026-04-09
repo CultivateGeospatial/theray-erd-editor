@@ -331,6 +331,102 @@ function generateSQL(model, dialect) {
   return out.join('\n');
 }
 
+function newUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function mockTimestamp(isMSSQL) {
+  const d = new Date(Date.now() - Math.random() * 365 * 24 * 3600 * 1000);
+  const pad = n => String(n).padStart(2, '0');
+  const base = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return isMSSQL ? `'${base}'` : `'${base}+00'`;
+}
+
+function mockStringVal(fieldName, idx) {
+  const n = fieldName.toLowerCase();
+  const q = v => `'${v}'`;
+  if (n === 'email' || n.endsWith('_email')) return q(`user${idx + 1}@example.com`);
+  if (n === 'first_name') return q(['Alice','Bob','Carol','David','Eve','Frank','Grace','Henry'][idx % 8]);
+  if (n === 'last_name')  return q(['Smith','Jones','Williams','Brown','Davis','Miller','Wilson','Moore'][idx % 8]);
+  if (n === 'name' || n.endsWith('_name')) return q(`Name ${idx + 1}`);
+  if (n === 'title')      return q(`Title ${idx + 1}`);
+  if (n === 'status')     return q(['active','inactive','pending','archived'][idx % 4]);
+  if (n === 'role')       return q(['admin','user','manager','viewer'][idx % 4]);
+  if (n === 'slug' || n.endsWith('_slug')) return q(`slug-${idx + 1}`);
+  if (n === 'code' || n.endsWith('_code')) return q(`CODE-${String(idx + 1).padStart(4, '0')}`);
+  if (n === 'url'  || n.endsWith('_url'))  return q(`https://example.com/item-${idx + 1}`);
+  if (n === 'description' || n.endsWith('_desc')) return q(`Description for item ${idx + 1}`);
+  if (n === 'type' || n.endsWith('_type')) return q(['typeA','typeB','typeC'][idx % 3]);
+  return q(`Value ${idx + 1}`);
+}
+
+function generateMockData(model, dialect) {
+  const isMSSQL = dialect === 'mssql';
+  const tbl = n => n.toLowerCase();
+
+  // Pre-generate PKs for every table so FK columns can reference them
+  const tablePKs = {};
+  const tableRowCounts = {};
+  Object.keys(model.entities).forEach(name => {
+    const count = 20 + Math.floor(Math.random() * 31); // 20–50
+    tableRowCounts[tbl(name)] = count;
+    tablePKs[tbl(name)] = Array.from({length: count}, () => newUUID());
+  });
+
+  // field_name → referenced table (same convention as generateSQL)
+  const fkRef = {};
+  Object.keys(model.entities).forEach(n => { fkRef[tbl(n)+'_id'] = tbl(n); });
+
+  const out = [];
+  out.push(`-- Mock Data — for development / testing only`);
+  out.push(`-- Row counts: 20–50 per table (randomised at export time)`);
+  out.push('');
+
+  Object.entries(model.entities).forEach(([name, ent]) => {
+    const t = tbl(name);
+    const count = tableRowCounts[t];
+    const fieldNames = ent.fields.map(f => f.name).join(', ');
+
+    out.push(`-- ${name} (${count} rows)`);
+
+    for (let i = 0; i < count; i++) {
+      const values = ent.fields.map(f => {
+        if (f.constraint === 'PK') {
+          if (f.type === 'int' || f.type === 'bigint') return String(i + 1);
+          return `'${tablePKs[t][i]}'`;
+        }
+        if (f.constraint === 'FK' || f.constraint === 'FK nullable') {
+          if (f.constraint === 'FK nullable' && Math.random() < 0.15) return 'NULL';
+          const ref = fkRef[f.name];
+          if (ref && tablePKs[ref] && tablePKs[ref].length > 0)
+            return `'${tablePKs[ref][Math.floor(Math.random() * tablePKs[ref].length)]}'`;
+          return 'NULL';
+        }
+        switch (f.type) {
+          case 'uuid':      return `'${newUUID()}'`;
+          case 'int':       return String(Math.floor(Math.random() * 1000));
+          case 'bigint':    return String(Math.floor(Math.random() * 1000000));
+          case 'bool':      return isMSSQL ? (Math.random() > 0.5 ? '1' : '0') : (Math.random() > 0.5 ? 'TRUE' : 'FALSE');
+          case 'float':     return (Math.random() * 100).toFixed(2);
+          case 'json':      return `'{}'`;
+          case 'timestamp': return mockTimestamp(isMSSQL);
+          case 'text':      return `'Sample text for ${f.name} — row ${i + 1}'`;
+          case 'enum':
+          case 'string':
+          default:          return mockStringVal(f.name, i);
+        }
+      });
+      out.push(`INSERT INTO ${t} (${fieldNames}) VALUES (${values.join(', ')});`);
+    }
+    out.push('');
+  });
+
+  return out.join('\n');
+}
+
 async function saveToGitHub(model, pat) {
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(model, null, 2))));
   // Get current SHA of working.json (needed for updates)
@@ -368,8 +464,9 @@ function App() {
   const [patInput,   setPatInput]   = useState('');
   const [ghStatus,   setGhStatus]   = useState(null); // null | 'saving' | 'ok' | 'error'
   const [ghMsg,      setGhMsg]      = useState('');
-  const [showHelp,      setShowHelp]      = useState(false);
-  const [showExportMenu,setShowExportMenu]= useState(false);
+  const [showHelp,       setShowHelp]       = useState(false);
+  const [includeMockData,setIncludeMockData]= useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [showImportMenu,setShowImportMenu]= useState(false);
   const [showGhMenu,    setShowGhMenu]    = useState(false);
   const [tooltip,    setTooltip]    = useState(null); // {x,y,fieldName,def}
@@ -531,14 +628,15 @@ function App() {
   }, [patInput]);
 
   const exportSQL = useCallback(dialect => {
-    const sql = generateSQL(model, dialect);
+    let sql = generateSQL(model, dialect);
+    if (includeMockData) sql += '\n' + generateMockData(model, dialect);
     const b = new Blob([sql], {type:'text/plain'});
     const u = URL.createObjectURL(b);
     const a = document.createElement('a');
     a.href = u; a.download = `theray_schema_${dialect}.sql`; a.click();
     URL.revokeObjectURL(u);
-    setShowSqlMenu(false);
-  }, [model]);
+    setShowExportMenu(false);
+  }, [model, includeMockData]);
 
   const exportJsonDefs = useCallback(() => {
     const defs = {};
@@ -587,6 +685,11 @@ function App() {
     borderRadius:4,overflow:'hidden',zIndex:100,minWidth:180,boxShadow:'0 4px 12px rgba(0,0,0,0.3)'
   }}, ...items.map((item,i) => item === '---'
     ? e('div',{key:i,style:{height:1,background:'rgba(255,255,255,0.15)',margin:'2px 0'}})
+    : item.checkbox !== undefined
+    ? e('label',{key:i,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',cursor:'pointer',color:'white',fontSize:11,fontFamily:'var(--font)',userSelect:'none'}},
+        e('input',{type:'checkbox',checked:item.checked,onChange:item.onChange,style:{cursor:'pointer',accentColor:'#FFC107'}}),
+        item.label
+      )
     : e('button',{key:i,className:'tb-btn',style:{display:'block',width:'100%',borderRadius:0,border:'none',textAlign:'left',padding:'8px 14px'},onClick:item.action},item.label)
   ));
 
@@ -608,6 +711,8 @@ function App() {
         showExportMenu && ddMenu([
           {label:'↓ Model JSON',       action:()=>{exportJSON();setShowExportMenu(false);}},
           {label:'↓ JSON Definitions', action:exportJsonDefs},
+          '---',
+          {label:'Include mock data (20–50 rows)', checkbox:true, checked:includeMockData, onChange:()=>setIncludeMockData(v=>!v)},
           '---',
           {label:'↓ SQL — MS SQL Server', action:()=>exportSQL('mssql')},
           {label:'↓ SQL — PostgreSQL',    action:()=>exportSQL('postgres')},
