@@ -470,7 +470,8 @@ function App() {
       }, ghStatus==='saving' ? 'Saving…' : ghStatus==='ok' ? '✓ Saved to GitHub' : ghStatus==='error' ? '✕ Error — retry?' : '↑ Save to GitHub'),
       e('button',{className:'tb-btn',onClick:()=>{setPatInput(pat);setShowPat(true);},title:'GitHub token settings'},'🔑'),
       e('button',{className:'tb-btn',onClick:()=>setShowHelp(true),title:'Help'},'?'),
-      e('button',{className:'tb-btn',onClick:()=>fileRef.current?.click()},'↓ Export JSON'),
+      e('button',{className:'tb-btn',onClick:exportJSON},'↓ Export JSON'),
+      e('button',{className:'tb-btn',onClick:()=>fileRef.current?.click()},'↑ Import JSON'),
       e('button',{className:'tb-btn',onClick:loadFromRepo},'↻ Load from Repo'),
       e('button',{className:'tb-btn',onClick:resetToDefault},'↺ Reset to Default'),
       e('input',{ref:fileRef,type:'file',accept:'.json',onChange:importJSON,style:{display:'none'}})
@@ -644,11 +645,25 @@ function App() {
         ),
 
         e('div',{className:'help-section'},
-          e('h3',null,'Export & import (offline / backup)'),
-          e('ul',null,
-            e('li',null,e('span',{className:'help-badge'},'↓ Export JSON'),' — downloads the current model as a JSON file to your computer.'),
-            e('li',null,e('span',{className:'help-badge'},'↑ Import JSON'),' (via the same button area) — loads a previously exported JSON file back into the editor. Useful for sharing a snapshot or restoring a backup.')
+          e('h3',null,'Export JSON'),
+          e('p',null,'Click ',e('span',{className:'help-badge'},'↓ Export JSON'),' to download the current model as a ',e('code',null,'working.json'),' file to your computer. Use this to:'),
+          e('ul',{style:{marginTop:6}},
+            e('li',null,'Keep a local backup before making large changes'),
+            e('li',null,'Share a snapshot with someone who doesn\'t have a GitHub token'),
+            e('li',null,'Work offline and import back later')
           )
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Import JSON'),
+          e('p',null,'Click ',e('span',{className:'help-badge'},'↑ Import JSON'),' to load a JSON file from your computer into the editor. This replaces the current canvas with the imported model.'),
+          e('p',{style:{marginTop:6}},e('strong',null,'To use a file someone shared with you:')),
+          e('ul',{style:{marginTop:4}},
+            e('li',null,'Save the JSON file they sent to your computer'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'↑ Import JSON'),' and select the file'),
+            e('li',null,'Review the changes, then click ',e('span',{className:'help-badge'},'↑ Save to GitHub'),' to publish them for the team')
+          ),
+          e('p',{style:{marginTop:6,color:'#f59e0b'}},e('strong',null,'Note: '),'Import immediately replaces your current session — export a backup first if you want to preserve your current state.')
         ),
 
         e('div',{className:'help-section'},
