@@ -767,7 +767,7 @@ function App() {
           {label:'↓ Model JSON',       action:()=>{exportJSON();setShowExportMenu(false);}},
           {label:'↓ JSON Definitions', action:exportJsonDefs},
           '---',
-          {label:'Include mock data (20–50 rows)', checkbox:true, checked:includeMockData, onChange:()=>setIncludeMockData(v=>!v)},
+          {label:'Include mock data', checkbox:true, checked:includeMockData, onChange:()=>setIncludeMockData(v=>!v)},
           '---',
           {label:'↓ SQL — MS SQL Server', action:()=>exportSQL('mssql')},
           {label:'↓ SQL — PostgreSQL',    action:()=>exportSQL('postgres')},
