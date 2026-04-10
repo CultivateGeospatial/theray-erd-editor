@@ -852,6 +852,39 @@ function App() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({orientation: w > h ? 'landscape' : 'portrait', unit:'pt', format:[w, h]});
       doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, w, h);
+
+      // Collect JSON field definitions
+      const defs = [];
+      Object.entries(model.entities).forEach(([name, ent]) => {
+        ent.fields.filter(f => f.type === 'json' && f.jsonDef).forEach(f => {
+          let parsed; try { parsed = JSON.parse(f.jsonDef); } catch { parsed = f.jsonDef; }
+          defs.push({ key: `${name}.${f.name}`, json: JSON.stringify(parsed, null, 2) });
+        });
+      });
+
+      if (defs.length > 0) {
+        const PW = 612, PH = 792, MARGIN = 40, LINE_H = 13;
+        const newPage = () => { doc.addPage([PW, PH], 'portrait'); return MARGIN; };
+        let y = newPage();
+
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+        doc.text('JSON Field Definitions', MARGIN, y); y += LINE_H * 2.2;
+
+        defs.forEach(({ key, json }) => {
+          if (y + LINE_H * 3 > PH - MARGIN) y = newPage();
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+          doc.setTextColor(2, 115, 181);
+          doc.text(key, MARGIN, y); y += LINE_H * 1.4;
+          doc.setFont('courier', 'normal'); doc.setFontSize(8);
+          doc.setTextColor(30, 41, 59);
+          doc.splitTextToSize(json, PW - MARGIN * 2).forEach(line => {
+            if (y + LINE_H > PH - MARGIN) y = newPage();
+            doc.text(line, MARGIN, y); y += LINE_H;
+          });
+          y += LINE_H * 0.8;
+        });
+      }
+
       doc.save('erd-diagram.pdf');
       setShowExportMenu(false);
     };
