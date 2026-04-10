@@ -388,6 +388,14 @@ function generateMockData(model, dialect) {
   out.push(`-- Row counts: 20–50 per table (randomised at export time)`);
   out.push('');
 
+  // Disable FK constraints so insert order doesn't matter and circular refs are handled
+  if (isMSSQL) {
+    out.push(`EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL';`);
+  } else {
+    out.push(`SET session_replication_role = replica;`);
+  }
+  out.push('');
+
   Object.entries(model.entities).forEach(([name, ent]) => {
     const t = tbl(name);
     const count = tableRowCounts[t];
@@ -406,7 +414,9 @@ function generateMockData(model, dialect) {
           const ref = fkRef[f.name];
           if (ref && tablePKs[ref] && tablePKs[ref].length > 0)
             return `'${tablePKs[ref][Math.floor(Math.random() * tablePKs[ref].length)]}'`;
-          return 'NULL';
+          // Non-conventional FK name (e.g. uploaded_by, granted_by) — generate a UUID
+          // so NOT NULL constraints are satisfied even without a resolvable reference
+          return `'${newUUID()}'`;
         }
         switch (f.type) {
           case 'uuid':      return `'${newUUID()}'`;
@@ -426,6 +436,14 @@ function generateMockData(model, dialect) {
     }
     out.push('');
   });
+
+  // Re-enable FK constraints
+  if (isMSSQL) {
+    out.push(`EXEC sp_msforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL';`);
+  } else {
+    out.push(`SET session_replication_role = DEFAULT;`);
+  }
+  out.push('');
 
   return out.join('\n');
 }
