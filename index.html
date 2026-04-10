@@ -333,6 +333,96 @@ function generateSQL(model, dialect) {
   return out.join('\n');
 }
 
+function generateCSharp(model) {
+  const toPascal = s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+
+  const csType = (f) => {
+    const nullable = f.constraint === '' || f.constraint === 'FK nullable';
+    const n = s => nullable ? `${s}?` : s;
+    switch (f.type) {
+      case 'uuid':      return n('Guid');
+      case 'int':       return n('int');
+      case 'bigint':    return n('long');
+      case 'bool':      return n('bool');
+      case 'float':     return n('double');
+      case 'timestamp': return n('DateTimeOffset');
+      case 'json':      return 'string'; // stored as JSON string; never null in model
+      case 'enum':
+      case 'string':
+      case 'text':
+      default:          return nullable ? 'string?' : 'string';
+    }
+  };
+
+  const fkRef = {};
+  Object.keys(model.entities).forEach(n => { fkRef[n.toLowerCase()+'_id'] = n; });
+
+  const out = [];
+  out.push(`// The Ray — C# Models`);
+  out.push(`// Generated: ${new Date().toISOString().split('T')[0]}`);
+  out.push(`// Namespace: adjust to match your project`);
+  out.push('');
+  out.push(`using System;`);
+  out.push(`using System.ComponentModel.DataAnnotations;`);
+  out.push(`using System.ComponentModel.DataAnnotations.Schema;`);
+  out.push('');
+  out.push(`namespace TheRay.Models`);
+  out.push(`{`);
+
+  Object.entries(model.entities).forEach(([name, ent], idx, arr) => {
+    const className = toPascal(name);
+    out.push(`    public class ${className}`);
+    out.push(`    {`);
+
+    ent.fields.forEach(f => {
+      const propName = toPascal(f.name);
+      const type = csType(f);
+
+      if (f.constraint === 'PK') {
+        out.push(`        [Key]`);
+      }
+      if (f.constraint === 'UNIQUE') {
+        out.push(`        // UNIQUE constraint — enforce at DB level`);
+      }
+      if (f.constraint === 'FK' || f.constraint === 'FK nullable') {
+        const ref = fkRef[f.name.toLowerCase()];
+        if (ref) out.push(`        [ForeignKey(nameof(${toPascal(ref)}))]`);
+      }
+      if (f.constraint !== '' && f.constraint !== 'FK nullable') {
+        out.push(`        [Required]`);
+      }
+      if (f.type === 'string') {
+        out.push(`        [MaxLength(255)]`);
+      }
+      if (f.type === 'enum') {
+        out.push(`        [MaxLength(50)]`);
+      }
+      if (f.type === 'json' && f.jsonDef) {
+        out.push(`        // JSON shape: ${f.jsonDef.replace(/\n/g,' ').replace(/\s+/g,' ').substring(0,80)}`);
+      }
+
+      out.push(`        public ${type} ${propName} { get; set; }`);
+      out.push('');
+    });
+
+    // Navigation properties for FK fields
+    ent.fields.filter(f => f.constraint === 'FK' || f.constraint === 'FK nullable').forEach(f => {
+      const ref = fkRef[f.name.toLowerCase()];
+      if (ref) {
+        const nullable = f.constraint === 'FK nullable';
+        out.push(`        public ${nullable ? 'virtual ' : 'virtual '}${toPascal(ref)}${nullable ? '?' : ''} ${toPascal(ref)} { get; set; }`);
+        out.push('');
+      }
+    });
+
+    out.push(`    }`);
+    if (idx < arr.length - 1) out.push('');
+  });
+
+  out.push(`}`);
+  return out.join('\n');
+}
+
 function newUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
@@ -708,6 +798,15 @@ function App() {
     setShowExportMenu(false);
   }, [model]);
 
+  const exportCSharp = useCallback(() => {
+    const cs = generateCSharp(model);
+    const b = new Blob([cs], {type:'text/plain'});
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a'); a.href=u; a.download='TheRayModels.cs'; a.click();
+    URL.revokeObjectURL(u);
+    setShowExportMenu(false);
+  }, [model]);
+
   const closeAllMenus = useCallback(() => {
     setShowExportMenu(false); setShowImportMenu(false); setShowGhMenu(false);
   }, []);
@@ -766,6 +865,7 @@ function App() {
         showExportMenu && ddMenu([
           {label:'↓ Model JSON',       action:()=>{exportJSON();setShowExportMenu(false);}},
           {label:'↓ JSON Definitions', action:exportJsonDefs},
+          {label:'↓ C# Models',        action:exportCSharp},
           '---',
           {label:'Include mock data', checkbox:true, checked:includeMockData, onChange:()=>setIncludeMockData(v=>!v)},
           '---',
