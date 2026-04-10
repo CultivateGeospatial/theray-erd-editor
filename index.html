@@ -7,7 +7,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
 <style>
 :root {
   --bg-primary: #ffffff;
@@ -809,7 +808,7 @@ function App() {
     setShowExportMenu(false);
   }, [model]);
 
-  const exportPDF = useCallback(async () => {
+  const exportPDF = useCallback(() => {
     const PAD = 40;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     Object.values(model.entities).forEach(ent => {
@@ -823,28 +822,35 @@ function App() {
     const h = maxY - minY + PAD * 2;
     const vbX = minX - PAD, vbY = minY - PAD;
 
-    const svg = svgRef.current.cloneNode(true);
-    svg.setAttribute('viewBox', `${vbX} ${vbY} ${w} ${h}`);
-    svg.setAttribute('width', w);
-    svg.setAttribute('height', h);
-
+    const clone = svgRef.current.cloneNode(true);
+    clone.setAttribute('viewBox', `${vbX} ${vbY} ${w} ${h}`);
+    clone.setAttribute('width', w);
+    clone.setAttribute('height', h);
     const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     bg.setAttribute('x', vbX); bg.setAttribute('y', vbY);
     bg.setAttribute('width', w); bg.setAttribute('height', h);
     bg.setAttribute('fill', 'white');
-    svg.insertBefore(bg, svg.firstChild);
+    clone.insertBefore(bg, clone.firstChild);
 
-    svg.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
-    document.body.appendChild(svg);
-    try {
+    const svgStr = new XMLSerializer().serializeToString(clone);
+    const url = URL.createObjectURL(new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'}));
+    const scale = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = w * scale; canvas.height = h * scale;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: w > h ? 'landscape' : 'portrait', unit: 'pt', format: [w, h] });
-      await window.svg2pdf(svg, doc, { x: 0, y: 0, width: w, height: h });
+      const doc = new jsPDF({orientation: w > h ? 'landscape' : 'portrait', unit:'pt', format:[w, h]});
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, w, h);
       doc.save('erd-diagram.pdf');
-    } finally {
-      document.body.removeChild(svg);
-    }
-    setShowExportMenu(false);
+      setShowExportMenu(false);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); alert('Failed to render diagram.'); };
+    img.src = url;
   }, [model]);
 
   const closeAllMenus = useCallback(() => {
