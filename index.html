@@ -365,6 +365,40 @@ function mockStringVal(fieldName, idx) {
   return q(`Value ${idx + 1}`);
 }
 
+function mockJsonVal(jsonDef, idx) {
+  let shape;
+  try { shape = typeof jsonDef === 'string' ? JSON.parse(jsonDef) : jsonDef; } catch { return "'{}'"; }
+  if (!shape || typeof shape !== 'object' || Array.isArray(shape)) return "'{}'";
+
+  function mockLeaf(key, exampleVal) {
+    const k = key.toLowerCase();
+    if (typeof exampleVal === 'boolean') return Math.random() > 0.5;
+    if (typeof exampleVal === 'number') return Number((Math.random() * 100).toFixed(2));
+    if (Array.isArray(exampleVal)) return exampleVal.length ? [exampleVal[idx % exampleVal.length]] : [];
+    if (typeof exampleVal === 'object' && exampleVal !== null) {
+      const nested = {};
+      Object.entries(exampleVal).forEach(([nk, nv]) => { nested[nk] = mockLeaf(nk, nv); });
+      return nested;
+    }
+    // string heuristics
+    if (k.includes('email')) return `user${idx+1}@example.com`;
+    if (k.includes('url') || k.includes('href')) return `https://example.com/item-${idx+1}`;
+    if (k.includes('name')) return `Name ${idx+1}`;
+    if (k.includes('id'))   return newUUID();
+    if (k.includes('status')) return ['active','inactive','pending'][idx%3];
+    if (k.includes('type'))   return ['typeA','typeB','typeC'][idx%3];
+    if (k.includes('count') || k.includes('total') || k.includes('size')) return Math.floor(Math.random()*100);
+    if (k.includes('date') || k.includes('at')) return new Date(Date.now() - Math.random()*1e10).toISOString();
+    if (k.includes('enabled') || k.includes('active') || k.includes('visible')) return Math.random()>0.5;
+    return `${key} ${idx+1}`;
+  }
+
+  const result = {};
+  Object.entries(shape).forEach(([k, v]) => { result[k] = mockLeaf(k, v); });
+  // escape single quotes for SQL
+  return `'${JSON.stringify(result).replace(/'/g, "''")}'`;
+}
+
 function generateMockData(model, dialect) {
   const isMSSQL = dialect === 'mssql';
   const tbl = n => n.toLowerCase();
@@ -424,7 +458,7 @@ function generateMockData(model, dialect) {
           case 'bigint':    return String(Math.floor(Math.random() * 1000000));
           case 'bool':      return isMSSQL ? (Math.random() > 0.5 ? '1' : '0') : (Math.random() > 0.5 ? 'TRUE' : 'FALSE');
           case 'float':     return (Math.random() * 100).toFixed(2);
-          case 'json':      return `'{}'`;
+          case 'json':      return mockJsonVal(f.jsonDef, i);
           case 'timestamp': return mockTimestamp(isMSSQL);
           case 'text':      return `'Sample text for ${f.name} — row ${i + 1}'`;
           case 'enum':
