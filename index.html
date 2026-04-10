@@ -832,6 +832,12 @@ function App() {
     bg.setAttribute('fill', 'white');
     clone.insertBefore(bg, clone.firstChild);
 
+    // CSS variables don't resolve in serialized SVG blobs — replace with real font stack
+    const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+    clone.querySelectorAll('[font-family]').forEach(el => {
+      if (el.getAttribute('font-family') === 'var(--font)') el.setAttribute('font-family', FONT);
+    });
+
     const svgStr = new XMLSerializer().serializeToString(clone);
     const url = URL.createObjectURL(new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'}));
     const scale = 2;
