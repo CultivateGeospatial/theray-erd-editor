@@ -273,6 +273,8 @@ function generateSQL(model, dialect) {
 
   const tbl = n => n.toLowerCase();
   const pfx = s => isMSSQL ? s.toUpperCase() : s.toLowerCase();
+  // Wrap table names to avoid reserved keyword conflicts (e.g. user, order, table)
+  const qt = n => isMSSQL ? `[${n}]` : `"${n}"`;
 
   // field_name → referenced table (workspace_id → workspace)
   const fkRef = {};
@@ -305,19 +307,19 @@ function generateSQL(model, dialect) {
     });
 
     out.push(`-- ${name}`);
-    out.push(`CREATE TABLE ${t} (`);
+    out.push(`CREATE TABLE ${qt(t)} (`);
     out.push([...cols, ...tableConstraints].join(',\n'));
     out.push(`);`);
     out.push('');
 
     ent.fields.filter(f => f.constraint === 'INDEX').forEach(f => {
-      out.push(`CREATE INDEX ${pfx('ix')}_${t}_${f.name} ON ${t} (${f.name});`);
+      out.push(`CREATE INDEX ${pfx('ix')}_${t}_${f.name} ON ${qt(t)} (${f.name});`);
       out.push('');
     });
 
     ent.fields.filter(f => f.constraint === 'FK' || f.constraint === 'FK nullable').forEach(f => {
       const ref = fkRef[f.name];
-      if (ref) alters.push(`ALTER TABLE ${t} ADD CONSTRAINT ${pfx('fk')}_${t}_${f.name} FOREIGN KEY (${f.name}) REFERENCES ${ref} (id);`);
+      if (ref) alters.push(`ALTER TABLE ${qt(t)} ADD CONSTRAINT ${pfx('fk')}_${t}_${f.name} FOREIGN KEY (${f.name}) REFERENCES ${qt(ref)} (id);`);
     });
   });
 
@@ -366,6 +368,7 @@ function mockStringVal(fieldName, idx) {
 function generateMockData(model, dialect) {
   const isMSSQL = dialect === 'mssql';
   const tbl = n => n.toLowerCase();
+  const qt = n => isMSSQL ? `[${n}]` : `"${n}"`;
 
   // Pre-generate PKs for every table so FK columns can reference them
   const tablePKs = {};
@@ -419,7 +422,7 @@ function generateMockData(model, dialect) {
           default:          return mockStringVal(f.name, i);
         }
       });
-      out.push(`INSERT INTO ${t} (${fieldNames}) VALUES (${values.join(', ')});`);
+      out.push(`INSERT INTO ${qt(t)} (${fieldNames}) VALUES (${values.join(', ')});`);
     }
     out.push('');
   });
