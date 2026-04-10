@@ -6,6 +6,8 @@
 <title>The Ray — ERD Editor</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
 <style>
 :root {
   --bg-primary: #ffffff;
@@ -807,6 +809,44 @@ function App() {
     setShowExportMenu(false);
   }, [model]);
 
+  const exportPDF = useCallback(async () => {
+    const PAD = 40;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    Object.values(model.entities).forEach(ent => {
+      minX = Math.min(minX, ent.x);
+      minY = Math.min(minY, ent.y);
+      maxX = Math.max(maxX, ent.x + BOX_W);
+      maxY = Math.max(maxY, ent.y + bh(ent.fields));
+    });
+    if (!isFinite(minX)) { alert('No entities to export.'); return; }
+    const w = maxX - minX + PAD * 2;
+    const h = maxY - minY + PAD * 2;
+    const vbX = minX - PAD, vbY = minY - PAD;
+
+    const svg = svgRef.current.cloneNode(true);
+    svg.setAttribute('viewBox', `${vbX} ${vbY} ${w} ${h}`);
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('x', vbX); bg.setAttribute('y', vbY);
+    bg.setAttribute('width', w); bg.setAttribute('height', h);
+    bg.setAttribute('fill', 'white');
+    svg.insertBefore(bg, svg.firstChild);
+
+    svg.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+    document.body.appendChild(svg);
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: w > h ? 'landscape' : 'portrait', unit: 'pt', format: [w, h] });
+      await window.svg2pdf(svg, doc, { x: 0, y: 0, width: w, height: h });
+      doc.save('erd-diagram.pdf');
+    } finally {
+      document.body.removeChild(svg);
+    }
+    setShowExportMenu(false);
+  }, [model]);
+
   const closeAllMenus = useCallback(() => {
     setShowExportMenu(false); setShowImportMenu(false); setShowGhMenu(false);
   }, []);
@@ -866,6 +906,7 @@ function App() {
           {label:'↓ Model JSON',       action:()=>{exportJSON();setShowExportMenu(false);}},
           {label:'↓ JSON Definitions', action:exportJsonDefs},
           {label:'↓ C# Models',        action:exportCSharp},
+          {label:'↓ PDF Diagram',      action:exportPDF},
           '---',
           {label:'Include mock data', checkbox:true, checked:includeMockData, onChange:()=>setIncludeMockData(v=>!v)},
           '---',
