@@ -4,340 +4,629 @@
       "x": 50,
       "y": 40,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "email", "type": "string", "constraint": "" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "role", "type": "enum", "constraint": "" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "role",
+          "type": "enum",
+          "constraint": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "constraint": ""
+        }
       ]
     },
     "WORKSPACE": {
       "x": 540,
       "y": 40,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "default_layer_set_id", "type": "uuid", "constraint": "FK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "description", "type": "string", "constraint": "" },
-        { "name": "arcgis_portal_url", "type": "string", "constraint": "" },
-        { "name": "wro_service_url", "type": "string", "constraint": "" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "default_layer_set_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "arcgis_portal_url",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "wro_service_url",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "constraint": ""
+        }
       ]
     },
     "DEFAULT_LAYER_SET": {
       "x": 1080,
       "y": 40,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "analysis_type", "type": "enum", "constraint": "" },
-        { "name": "state_code", "type": "string", "constraint": "" },
-        { "name": "layer_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"layers\": [\n    {\n      \"name\": \"Slope\",\n      \"service_url\": \"https://portal/rest/services/slope/ImageServer\",\n      \"layer_type\": \"raster\",\n      \"default_weight\": 0.25,\n      \"sort_order\": 1\n    },\n    {\n      \"name\": \"Wetlands\",\n      \"service_url\": \"https://portal/rest/services/wetlands/FeatureServer/0\",\n      \"layer_type\": \"exclusion\",\n      \"default_weight\": 0,\n      \"sort_order\": 2\n    }\n  ]\n}" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "analysis_type",
+          "type": "enum",
+          "constraint": ""
+        },
+        {
+          "name": "state_code",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "layer_config",
+          "type": "json",
+          "constraint": "",
+          "jsonDef": "{\n  \"layers\": [\n    {\n      \"name\": \"Slope\",\n      \"service_url\": \"https://portal/rest/services/slope/ImageServer\",\n      \"layer_type\": \"raster\",\n      \"default_weight\": 0.25,\n      \"sort_order\": 1\n    },\n    {\n      \"name\": \"Wetlands\",\n      \"service_url\": \"https://portal/rest/services/wetlands/FeatureServer/0\",\n      \"layer_type\": \"exclusion\",\n      \"default_weight\": 0,\n      \"sort_order\": 2\n    }\n  ]\n}"
+        }
       ]
     },
     "WORKSPACE_MEMBER": {
       "x": 50,
       "y": 300,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
-        { "name": "user_id", "type": "uuid", "constraint": "FK" },
-        { "name": "role", "type": "enum", "constraint": "" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "workspace_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "role",
+          "type": "enum",
+          "constraint": ""
+        }
       ]
     },
     "WORKSPACE_LAYER": {
       "x": 310,
       "y": 300,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
-        { "name": "uploaded_by", "type": "uuid", "constraint": "FK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "layer_type", "type": "enum", "constraint": "" },
-        { "name": "blob_path", "type": "string", "constraint": "" },
-        { "name": "service_url", "type": "string", "constraint": "" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "workspace_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "uploaded_by",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "layer_type",
+          "type": "enum",
+          "constraint": ""
+        },
+        {
+          "name": "blob_path",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "service_url",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "constraint": ""
+        }
       ]
     },
     "PROJECT": {
       "x": 790,
       "y": 300,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "description", "type": "string", "constraint": "" },
-        { "name": "area_of_interest", "type": "json", "constraint": "", "jsonDef": "{\n  \"type\": \"Polygon\",\n  \"coordinates\": [\n    [\n      [-93.5, 44.8],\n      [-93.0, 44.8],\n      [-93.0, 45.1],\n      [-93.5, 45.1],\n      [-93.5, 44.8]\n    ]\n  ],\n  \"spatialReference\": { \"wkid\": 4326 }\n}" },
-        { "name": "saved_state", "type": "json", "constraint": "", "jsonDef": "{\n  \"map_extent\": {\n    \"xmin\": -93.5, \"ymin\": 44.8,\n    \"xmax\": -93.0, \"ymax\": 45.1\n  },\n  \"zoom_level\": 10,\n  \"active_scenario_id\": \"uuid\",\n  \"visible_layers\": [\"slope\", \"wetlands\"]\n}" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "workspace_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "area_of_interest",
+          "type": "json",
+          "constraint": "",
+          "jsonDef": "{\n  \"type\": \"Polygon\",\n  \"coordinates\": [\n    [\n      [-93.5, 44.8],\n      [-93.0, 44.8],\n      [-93.0, 45.1],\n      [-93.5, 45.1],\n      [-93.5, 44.8]\n    ]\n  ],\n  \"spatialReference\": { \"wkid\": 4326 }\n}"
+        },
+        {
+          "name": "saved_state",
+          "type": "json",
+          "constraint": "",
+          "jsonDef": "{\n  \"map_extent\": {\n    \"xmin\": -93.5, \"ymin\": 44.8,\n    \"xmax\": -93.0, \"ymax\": 45.1\n  },\n  \"zoom_level\": 10,\n  \"active_scenario_id\": \"uuid\",\n  \"visible_layers\": [\"slope\", \"wetlands\"]\n}"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "constraint": ""
+        }
       ]
     },
     "PROJECT_MEMBER": {
       "x": 1080,
       "y": 300,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "project_id", "type": "uuid", "constraint": "FK" },
-        { "name": "user_id", "type": "uuid", "constraint": "FK" },
-        { "name": "role", "type": "enum", "constraint": "" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "role",
+          "type": "enum",
+          "constraint": ""
+        }
       ]
     },
     "WORKSPACE_LAYER_PERMISSION": {
       "x": 50,
       "y": 590,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "workspace_layer_id", "type": "uuid", "constraint": "FK" },
-        { "name": "project_id", "type": "uuid", "constraint": "FK nullable" },
-        { "name": "user_id", "type": "uuid", "constraint": "FK nullable" },
-        { "name": "granted_by", "type": "uuid", "constraint": "FK" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "workspace_layer_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "constraint": "FK nullable"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "constraint": "FK nullable"
+        },
+        {
+          "name": "granted_by",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "constraint": ""
+        }
       ]
     },
     "SCENARIO": {
       "x": 790,
       "y": 590,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "project_id", "type": "uuid", "constraint": "FK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "analysis_type", "type": "enum", "constraint": "" },
-        { "name": "layer_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"layers\": [\n    {\n      \"workspace_layer_id\": \"uuid\",\n      \"name\": \"Slope\",\n      \"weight\": 0.3,\n      \"is_active\": true,\n      \"sort_order\": 1\n    },\n    {\n      \"workspace_layer_id\": \"uuid\",\n      \"name\": \"Wetlands\",\n      \"weight\": 0,\n      \"is_active\": true,\n      \"sort_order\": 2\n    }\n  ]\n}" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "analysis_type",
+          "type": "enum",
+          "constraint": ""
+        },
+        {
+          "name": "layer_config",
+          "type": "json",
+          "constraint": "",
+          "jsonDef": "{\n  \"layers\": [\n    {\n      \"workspace_layer_id\": \"uuid\",\n      \"name\": \"Slope\",\n      \"weight\": 0.3,\n      \"is_active\": true,\n      \"sort_order\": 1\n    },\n    {\n      \"workspace_layer_id\": \"uuid\",\n      \"name\": \"Wetlands\",\n      \"weight\": 0,\n      \"is_active\": true,\n      \"sort_order\": 2\n    }\n  ]\n}"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "constraint": ""
+        }
       ]
     },
     "SCENARIO_LAYER": {
       "x": 310,
       "y": 860,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "scenario_id", "type": "uuid", "constraint": "FK" },
-        { "name": "workspace_layer_id", "type": "uuid", "constraint": "FK nullable" },
-        { "name": "layer_name", "type": "string", "constraint": "" },
-        { "name": "source_type", "type": "enum", "constraint": "" },
-        { "name": "service_url", "type": "string", "constraint": "" },
-        { "name": "sort_order", "type": "int", "constraint": "" },
-        { "name": "is_active", "type": "bool", "constraint": "" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "scenario_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "workspace_layer_id",
+          "type": "uuid",
+          "constraint": "FK nullable"
+        },
+        {
+          "name": "layer_name",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "source_type",
+          "type": "enum",
+          "constraint": ""
+        },
+        {
+          "name": "service_url",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "sort_order",
+          "type": "int",
+          "constraint": ""
+        },
+        {
+          "name": "is_active",
+          "type": "bool",
+          "constraint": ""
+        }
       ]
     },
     "ANALYSIS_RUN": {
       "x": 790,
       "y": 860,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "scenario_id", "type": "uuid", "constraint": "FK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "status", "type": "enum", "constraint": "" },
-        { "name": "buffer_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"transmission_line_buffer_ft\": 150,\n  \"road_buffer_ft\": 50,\n  \"wetland_buffer_ft\": 300,\n  \"parcel_boundary_buffer_ft\": 25\n}" },
-        { "name": "suitability_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"min_parcel_acres\": 20,\n  \"max_slope_pct\": 15,\n  \"exclude_flood_zone\": true,\n  \"exclude_wetlands\": true,\n  \"min_suitability_score\": 60\n}" },
-        { "name": "weight_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"layers\": [\n    { \"layer_id\": \"uuid\", \"name\": \"Slope\", \"weight\": 0.30 },\n    { \"layer_id\": \"uuid\", \"name\": \"Wetlands\", \"weight\": 0.25 },\n    { \"layer_id\": \"uuid\", \"name\": \"Proximity to Transmission\", \"weight\": 0.25 },\n    { \"layer_id\": \"uuid\", \"name\": \"Land Cover\", \"weight\": 0.20 }\n  ],\n  \"total_weight\": 1.0\n}" },
-        { "name": "result_blob_path", "type": "string", "constraint": "" },
-        { "name": "result_service_url", "type": "string", "constraint": "" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" },
-        { "name": "completed_at", "type": "timestamp", "constraint": "" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "scenario_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "constraint": ""
+        },
+        {
+          "name": "buffer_config",
+          "type": "json",
+          "constraint": "",
+          "jsonDef": "{\n  \"transmission_line_buffer_ft\": 150,\n  \"road_buffer_ft\": 50,\n  \"wetland_buffer_ft\": 300,\n  \"parcel_boundary_buffer_ft\": 25\n}"
+        },
+        {
+          "name": "suitability_config",
+          "type": "json",
+          "constraint": "",
+          "jsonDef": "{\n  \"min_parcel_acres\": 20,\n  \"max_slope_pct\": 15,\n  \"exclude_flood_zone\": true,\n  \"exclude_wetlands\": true,\n  \"min_suitability_score\": 60\n}"
+        },
+        {
+          "name": "weight_config",
+          "type": "json",
+          "constraint": "",
+          "jsonDef": "{\n  \"layers\": [\n    { \"layer_id\": \"uuid\", \"name\": \"Slope\", \"weight\": 0.30 },\n    { \"layer_id\": \"uuid\", \"name\": \"Wetlands\", \"weight\": 0.25 },\n    { \"layer_id\": \"uuid\", \"name\": \"Proximity to Transmission\", \"weight\": 0.25 },\n    { \"layer_id\": \"uuid\", \"name\": \"Land Cover\", \"weight\": 0.20 }\n  ],\n  \"total_weight\": 1.0\n}"
+        },
+        {
+          "name": "result_blob_path",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "result_service_url",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "constraint": ""
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamp",
+          "constraint": ""
+        }
       ]
     },
     "WORKSPACE_DEM": {
       "x": 1380,
       "y": 40,
       "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "workspace_id", "type": "uuid", "constraint": "FK", "index": true },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "resolution", "type": "string", "constraint": "" },
-        { "name": "extent_bbox", "type": "geometry/json", "constraint": "" },
-        { "name": "crs", "type": "string", "constraint": "" },
-        { "name": "file_size_bytes", "type": "bigint", "constraint": "" },
-        { "name": "blob_url", "type": "string", "constraint": "" },
-        { "name": "image_service_url", "type": "string", "constraint": "nullable" },
-        { "name": "upload_date", "type": "timestamp", "constraint": "" },
-        { "name": "status", "type": "enum", "constraint": "", "index": true },
-        { "name": "error_message", "type": "string", "constraint": "nullable" }
+        {
+          "name": "id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "workspace_id",
+          "type": "uuid",
+          "constraint": "FK",
+          "index": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "resolution",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "extent_bbox",
+          "type": "geometry/json",
+          "constraint": ""
+        },
+        {
+          "name": "crs",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "file_size_bytes",
+          "type": "bigint",
+          "constraint": ""
+        },
+        {
+          "name": "blob_url",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "image_service_url",
+          "type": "string",
+          "constraint": "nullable"
+        },
+        {
+          "name": "upload_date",
+          "type": "timestamp",
+          "constraint": ""
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "constraint": "",
+          "index": true
+        },
+        {
+          "name": "error_message",
+          "type": "string",
+          "constraint": "nullable"
+        }
       ]
     },
     "PROCESSING_QUEUE": {
       "x": 1380,
       "y": 400,
       "fields": [
-        { "name": "job_id", "type": "uuid", "constraint": "PK" },
-        { "name": "job_type", "type": "string", "constraint": "" },
-        { "name": "reference_id", "type": "uuid", "constraint": "FK" },
-        { "name": "tenant_id", "type": "uuid", "constraint": "" },
-        { "name": "status", "type": "enum", "constraint": "" },
-        { "name": "created_date", "type": "timestamp", "constraint": "" },
-        { "name": "started_date", "type": "timestamp", "constraint": "nullable" },
-        { "name": "completed_date", "type": "timestamp", "constraint": "nullable" },
-        { "name": "error_details", "type": "string", "constraint": "nullable" }
+        {
+          "name": "job_id",
+          "type": "uuid",
+          "constraint": "PK"
+        },
+        {
+          "name": "job_type",
+          "type": "string",
+          "constraint": ""
+        },
+        {
+          "name": "reference_id",
+          "type": "uuid",
+          "constraint": "FK"
+        },
+        {
+          "name": "tenant_id",
+          "type": "uuid",
+          "constraint": ""
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "constraint": ""
+        },
+        {
+          "name": "created_date",
+          "type": "timestamp",
+          "constraint": ""
+        },
+        {
+          "name": "started_date",
+          "type": "timestamp",
+          "constraint": "nullable"
+        },
+        {
+          "name": "completed_date",
+          "type": "timestamp",
+          "constraint": "nullable"
+        },
+        {
+          "name": "error_details",
+          "type": "string",
+          "constraint": "nullable"
+        }
       ]
     }
   },
   "relationships": [
-    { "id": "r3",  "from": "WORKSPACE"                   , "to": "DEFAULT_LAYER_SET"           , "label": "initialized from" },
-    { "id": "r4",  "from": "WORKSPACE"                   , "to": "WORKSPACE_MEMBER"            , "label": "has" },
-    { "id": "r5",  "from": "WORKSPACE"                   , "to": "WORKSPACE_LAYER"             , "label": "stores" },
-    { "id": "r6",  "from": "WORKSPACE"                   , "to": "PROJECT"                     , "label": "contains" },
-    { "id": "r7",  "from": "WORKSPACE_LAYER"             , "to": "WORKSPACE_LAYER_PERMISSION"  , "label": "grants" },
-    { "id": "r8",  "from": "WORKSPACE_LAYER_PERMISSION"  , "to": "PROJECT"                     , "label": "to project" },
-    { "id": "r9",  "from": "WORKSPACE_LAYER_PERMISSION"  , "to": "USER"                        , "label": "to user" },
-    { "id": "r10",  "from": "PROJECT"                     , "to": "PROJECT_MEMBER"              , "label": "has" },
-    { "id": "r11",  "from": "PROJECT"                     , "to": "SCENARIO"                    , "label": "contains" },
-    { "id": "r12",  "from": "SCENARIO"                    , "to": "SCENARIO_LAYER"              , "label": "inputs" },
-    { "id": "r13",  "from": "SCENARIO_LAYER"              , "to": "WORKSPACE_LAYER"             , "label": "references" },
-    { "id": "r14",  "from": "SCENARIO"                    , "to": "ANALYSIS_RUN"                , "label": "produces" },
-    { "id": "r15",  "from": "WORKSPACE"                   , "to": "WORKSPACE_DEM"               , "label": "has DEMs" },
-    { "id": "r16",  "from": "WORKSPACE_DEM"               , "to": "PROCESSING_QUEUE"            , "label": "queues" }
-  ]
-}
-{
-  "entities": {
-    "USER": {
-      "x": 50,
-      "y": 40,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "email", "type": "string", "constraint": "" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "role", "type": "enum", "constraint": "" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
-      ]
+    {
+      "id": "r3",
+      "from": "WORKSPACE",
+      "to": "DEFAULT_LAYER_SET",
+      "label": "initialized from"
     },
-    "WORKSPACE": {
-      "x": 540,
-      "y": 40,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "default_layer_set_id", "type": "uuid", "constraint": "FK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "description", "type": "string", "constraint": "" },
-        { "name": "arcgis_portal_url", "type": "string", "constraint": "" },
-        { "name": "wro_service_url", "type": "string", "constraint": "" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
-      ]
+    {
+      "id": "r4",
+      "from": "WORKSPACE",
+      "to": "WORKSPACE_MEMBER",
+      "label": "has"
     },
-    "DEFAULT_LAYER_SET": {
-      "x": 1080,
-      "y": 40,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "analysis_type", "type": "enum", "constraint": "" },
-        { "name": "state_code", "type": "string", "constraint": "" },
-        { "name": "layer_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"layers\": [\n    {\n      \"name\": \"Slope\",\n      \"service_url\": \"https://portal/rest/services/slope/ImageServer\",\n      \"layer_type\": \"raster\",\n      \"default_weight\": 0.25,\n      \"sort_order\": 1\n    },\n    {\n      \"name\": \"Wetlands\",\n      \"service_url\": \"https://portal/rest/services/wetlands/FeatureServer/0\",\n      \"layer_type\": \"exclusion\",\n      \"default_weight\": 0,\n      \"sort_order\": 2\n    }\n  ]\n}" }
-      ]
+    {
+      "id": "r5",
+      "from": "WORKSPACE",
+      "to": "WORKSPACE_LAYER",
+      "label": "stores"
     },
-    "WORKSPACE_MEMBER": {
-      "x": 50,
-      "y": 300,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
-        { "name": "user_id", "type": "uuid", "constraint": "FK" },
-        { "name": "role", "type": "enum", "constraint": "" }
-      ]
+    {
+      "id": "r6",
+      "from": "WORKSPACE",
+      "to": "PROJECT",
+      "label": "contains"
     },
-    "WORKSPACE_LAYER": {
-      "x": 310,
-      "y": 300,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
-        { "name": "uploaded_by", "type": "uuid", "constraint": "FK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "layer_type", "type": "enum", "constraint": "" },
-        { "name": "blob_path", "type": "string", "constraint": "" },
-        { "name": "service_url", "type": "string", "constraint": "" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
-      ]
+    {
+      "id": "r7",
+      "from": "WORKSPACE_LAYER",
+      "to": "WORKSPACE_LAYER_PERMISSION",
+      "label": "grants"
     },
-    "PROJECT": {
-      "x": 790,
-      "y": 300,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "workspace_id", "type": "uuid", "constraint": "FK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "description", "type": "string", "constraint": "" },
-        { "name": "area_of_interest", "type": "json", "constraint": "", "jsonDef": "{\n  \"type\": \"Polygon\",\n  \"coordinates\": [\n    [\n      [-93.5, 44.8],\n      [-93.0, 44.8],\n      [-93.0, 45.1],\n      [-93.5, 45.1],\n      [-93.5, 44.8]\n    ]\n  ],\n  \"spatialReference\": { \"wkid\": 4326 }\n}" },
-        { "name": "saved_state", "type": "json", "constraint": "", "jsonDef": "{\n  \"map_extent\": {\n    \"xmin\": -93.5, \"ymin\": 44.8,\n    \"xmax\": -93.0, \"ymax\": 45.1\n  },\n  \"zoom_level\": 10,\n  \"active_scenario_id\": \"uuid\",\n  \"visible_layers\": [\"slope\", \"wetlands\"]\n}" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
-      ]
+    {
+      "id": "r8",
+      "from": "WORKSPACE_LAYER_PERMISSION",
+      "to": "PROJECT",
+      "label": "to project"
     },
-    "PROJECT_MEMBER": {
-      "x": 1080,
-      "y": 300,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "project_id", "type": "uuid", "constraint": "FK" },
-        { "name": "user_id", "type": "uuid", "constraint": "FK" },
-        { "name": "role", "type": "enum", "constraint": "" }
-      ]
+    {
+      "id": "r9",
+      "from": "WORKSPACE_LAYER_PERMISSION",
+      "to": "USER",
+      "label": "to user"
     },
-    "WORKSPACE_LAYER_PERMISSION": {
-      "x": 50,
-      "y": 590,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "workspace_layer_id", "type": "uuid", "constraint": "FK" },
-        { "name": "project_id", "type": "uuid", "constraint": "FK nullable" },
-        { "name": "user_id", "type": "uuid", "constraint": "FK nullable" },
-        { "name": "granted_by", "type": "uuid", "constraint": "FK" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
-      ]
+    {
+      "id": "r10",
+      "from": "PROJECT",
+      "to": "PROJECT_MEMBER",
+      "label": "has"
     },
-    "SCENARIO": {
-      "x": 790,
-      "y": 590,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "project_id", "type": "uuid", "constraint": "FK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "analysis_type", "type": "enum", "constraint": "" },
-        { "name": "layer_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"layers\": [\n    {\n      \"workspace_layer_id\": \"uuid\",\n      \"name\": \"Slope\",\n      \"weight\": 0.3,\n      \"is_active\": true,\n      \"sort_order\": 1\n    },\n    {\n      \"workspace_layer_id\": \"uuid\",\n      \"name\": \"Wetlands\",\n      \"weight\": 0,\n      \"is_active\": true,\n      \"sort_order\": 2\n    }\n  ]\n}" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" }
-      ]
+    {
+      "id": "r11",
+      "from": "PROJECT",
+      "to": "SCENARIO",
+      "label": "contains"
     },
-    "SCENARIO_LAYER": {
-      "x": 310,
-      "y": 860,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "scenario_id", "type": "uuid", "constraint": "FK" },
-        { "name": "workspace_layer_id", "type": "uuid", "constraint": "FK nullable" },
-        { "name": "layer_name", "type": "string", "constraint": "" },
-        { "name": "source_type", "type": "enum", "constraint": "" },
-        { "name": "service_url", "type": "string", "constraint": "" },
-        { "name": "sort_order", "type": "int", "constraint": "" },
-        { "name": "is_active", "type": "bool", "constraint": "" }
-      ]
+    {
+      "id": "r12",
+      "from": "SCENARIO",
+      "to": "SCENARIO_LAYER",
+      "label": "inputs"
     },
-    "ANALYSIS_RUN": {
-      "x": 790,
-      "y": 860,
-      "fields": [
-        { "name": "id", "type": "uuid", "constraint": "PK" },
-        { "name": "scenario_id", "type": "uuid", "constraint": "FK" },
-        { "name": "name", "type": "string", "constraint": "" },
-        { "name": "status", "type": "enum", "constraint": "" },
-        { "name": "buffer_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"transmission_line_buffer_ft\": 150,\n  \"road_buffer_ft\": 50,\n  \"wetland_buffer_ft\": 300,\n  \"parcel_boundary_buffer_ft\": 25\n}" },
-        { "name": "suitability_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"min_parcel_acres\": 20,\n  \"max_slope_pct\": 15,\n  \"exclude_flood_zone\": true,\n  \"exclude_wetlands\": true,\n  \"min_suitability_score\": 60\n}" },
-        { "name": "weight_config", "type": "json", "constraint": "", "jsonDef": "{\n  \"layers\": [\n    { \"layer_id\": \"uuid\", \"name\": \"Slope\", \"weight\": 0.30 },\n    { \"layer_id\": \"uuid\", \"name\": \"Wetlands\", \"weight\": 0.25 },\n    { \"layer_id\": \"uuid\", \"name\": \"Proximity to Transmission\", \"weight\": 0.25 },\n    { \"layer_id\": \"uuid\", \"name\": \"Land Cover\", \"weight\": 0.20 }\n  ],\n  \"total_weight\": 1.0\n}" },
-        { "name": "result_blob_path", "type": "string", "constraint": "" },
-        { "name": "result_service_url", "type": "string", "constraint": "" },
-        { "name": "created_at", "type": "timestamp", "constraint": "" },
-        { "name": "completed_at", "type": "timestamp", "constraint": "" }
-      ]
+    {
+      "id": "r13",
+      "from": "SCENARIO_LAYER",
+      "to": "WORKSPACE_LAYER",
+      "label": "references"
+    },
+    {
+      "id": "r14",
+      "from": "SCENARIO",
+      "to": "ANALYSIS_RUN",
+      "label": "produces"
+    },
+    {
+      "id": "r15",
+      "from": "WORKSPACE",
+      "to": "WORKSPACE_DEM",
+      "label": "has DEMs"
+    },
+    {
+      "id": "r16",
+      "from": "WORKSPACE_DEM",
+      "to": "PROCESSING_QUEUE",
+      "label": "queues"
     }
-  },
-  "relationships": [
-    { "id": "r3",  "from": "WORKSPACE",                  "to": "DEFAULT_LAYER_SET",           "label": "initialized from" },
-    { "id": "r4",  "from": "WORKSPACE",                  "to": "WORKSPACE_MEMBER",            "label": "has" },
-    { "id": "r5",  "from": "WORKSPACE",                  "to": "WORKSPACE_LAYER",             "label": "stores" },
-    { "id": "r6",  "from": "WORKSPACE",                  "to": "PROJECT",                     "label": "contains" },
-    { "id": "r7",  "from": "WORKSPACE_LAYER",            "to": "WORKSPACE_LAYER_PERMISSION",  "label": "grants" },
-    { "id": "r8",  "from": "WORKSPACE_LAYER_PERMISSION", "to": "PROJECT",                     "label": "to project" },
-    { "id": "r9",  "from": "WORKSPACE_LAYER_PERMISSION", "to": "USER",                        "label": "to user" },
-    { "id": "r10", "from": "PROJECT",                    "to": "PROJECT_MEMBER",              "label": "has" },
-    { "id": "r11", "from": "PROJECT",                    "to": "SCENARIO",                    "label": "contains" },
-    { "id": "r12", "from": "SCENARIO",                   "to": "SCENARIO_LAYER",              "label": "inputs" },
-    { "id": "r13", "from": "SCENARIO_LAYER",             "to": "WORKSPACE_LAYER",             "label": "references" },
-    { "id": "r14", "from": "SCENARIO",                   "to": "ANALYSIS_RUN",                "label": "produces" }
   ]
 }
