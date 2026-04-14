@@ -198,11 +198,12 @@ const { useState, useRef, useEffect, useCallback } = React;
 
 const STORAGE_KEY = 'theray-erd-v1';
 const PAT_KEY     = 'theray-erd-pat';
-const GH_REPO     = 'CultivateGeospatial/theray-erd-editor';
-const GH_FILE     = 'working.json';
+const GH_REPO     = 'CultivateGeospatial/theray';
+const GH_BRANCH   = 'ERD_Editor';
+const GH_FILE     = 'docs/erd-editor/working.json';
 const BOX_W = 220, HDR_H = 28, ROW_H = 20, FPAD = 5;
 const FTYPES = ['uuid','string','int','bigint','bool','json','enum','timestamp','float','text'];
-const CONS   = ['','PK','FK','FK nullable','UNIQUE','NOT NULL','INDEX'];
+const CONS   = ['','PK','FK','FK nullable','nullable','UNIQUE','NOT NULL','INDEX'];
 
 function bh(fields) { return HDR_H + fields.length * ROW_H + FPAD * 2; }
 
@@ -244,7 +245,7 @@ function midPt(e1, e2) {
   return { x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2 };
 }
 
-const cColor = c => c==='PK'?'#0273B5' : c.startsWith('FK')?'#4A8FA8' : '#888';
+const cColor = c => c==='PK'?'#0273B5' : c.startsWith('FK')?'#4A8FA8' : c==='nullable'?'#94a3b8' : '#888';
 
 async function fetchModel() {
   for (const url of ['./working.json', './default.json']) {
@@ -296,7 +297,7 @@ function generateSQL(model, dialect) {
 
     ent.fields.forEach(f => {
       const sqlType = typeMap[f.type] || (isMSSQL ? 'NVARCHAR(255)' : 'VARCHAR(255)');
-      const nullable = (f.constraint === '' || f.constraint === 'FK nullable') ? ' NULL' : ' NOT NULL';
+      const nullable = (f.constraint === '' || f.constraint === 'FK nullable' || f.constraint === 'nullable') ? ' NULL' : ' NOT NULL';
       cols.push(`  ${f.name} ${sqlType}${nullable}`);
     });
 
@@ -338,7 +339,7 @@ function generateCSharp(model) {
   const toPascal = s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
 
   const csType = (f) => {
-    const nullable = f.constraint === '' || f.constraint === 'FK nullable';
+    const nullable = f.constraint === '' || f.constraint === 'FK nullable' || f.constraint === 'nullable';
     const n = s => nullable ? `${s}?` : s;
     switch (f.type) {
       case 'uuid':      return n('Guid');
@@ -389,7 +390,7 @@ function generateCSharp(model) {
         const ref = fkRef[f.name.toLowerCase()];
         if (ref) out.push(`        [ForeignKey(nameof(${toPascal(ref)}))]`);
       }
-      if (f.constraint !== '' && f.constraint !== 'FK nullable') {
+      if (f.constraint !== '' && f.constraint !== 'FK nullable' && f.constraint !== 'nullable') {
         out.push(`        [Required]`);
       }
       if (f.type === 'string') {
@@ -577,10 +578,10 @@ async function saveToGitHub(model, pat) {
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(model, null, 2))));
   // Get current SHA of working.json (needed for updates)
   const headers = { Authorization: `token ${pat}`, 'Content-Type': 'application/json' };
-  const getRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, { headers });
+  const getRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}`, { headers });
   let sha;
   if (getRes.ok) { const data = await getRes.json(); sha = data.sha; }
-  const body = { message: 'chore: update working.json from ERD Editor', content, ...(sha ? { sha } : {}) };
+  const body = { message: 'chore: update working.json from ERD Editor', content, branch: GH_BRANCH, ...(sha ? { sha } : {}) };
   const putRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
     method: 'PUT', headers, body: JSON.stringify(body)
   });
@@ -1045,7 +1046,7 @@ function App() {
                   i%2===1&&e('rect',{x:ent.x+1,y:fy,width:BOX_W-2,height:ROW_H,fill:'rgba(2,115,181,0.04)'}),
                   isJson&&e('rect',{x:ent.x+1,y:fy,width:BOX_W-2,height:ROW_H,fill:'rgba(74,143,168,0.08)'}),
                   f.constraint&&e('text',{x:ent.x+7,y:fy+ROW_H/2+3.5,fontSize:8,fontWeight:700,fill:cColor(f.constraint),fontFamily:'var(--font)'},f.constraint.split(' ')[0]),
-                  e('text',{x:ent.x+34,y:fy+ROW_H/2+3.5,fontSize:10,fill:'#1e293b',fontFamily:'var(--font)'},f.name),
+                  e('text',{x:ent.x+52,y:fy+ROW_H/2+3.5,fontSize:10,fill:'#1e293b',fontFamily:'var(--font)'},f.name),
                   e('text',{x:ent.x+BOX_W-7,y:fy+ROW_H/2+3.5,textAnchor:'end',fontSize:9,fill: isJson?'#4A8FA8':'#64748b',fontFamily:'var(--font)',fontStyle:'italic'},f.type),
                   isJson&&f.jsonDef&&e('text',{x:ent.x+BOX_W-8,y:fy+ROW_H/2+3.5,textAnchor:'end',fontSize:8,fill:'#4A8FA8',fontFamily:'var(--font)'},'')
                 );
