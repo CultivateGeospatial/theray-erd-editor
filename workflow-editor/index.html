@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ray — Workflow Editor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<style>
+:root {
+  --bg: #f0f4f8;
+  --surface: #ffffff;
+  --text: #1e293b;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --border-md: rgba(0,0,0,0.18);
+  --cgs-blue: #0273B5;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --admin-color: #0273B5;  --admin-bg: #eff6ff;
+  --user-color: #16a34a;   --user-bg: #f0fdf4;
+  --api-color: #7c3aed;    --api-bg: #faf5ff;
+  --data-color: #b45309;   --data-bg: #fffbeb;
+  --process-color: #dc2626;--process-bg: #fef2f2;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; background: var(--bg); }
+body { font-family: var(--font); font-size: 13px; color: var(--text); display: flex; flex-direction: column; }
+#app { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+#app-root { display: flex; flex-direction: column; height: 100%; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 3px; }
+
+/* ── Toolbar ── */
+.toolbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; background: var(--cgs-blue); color: white;
+  flex-shrink: 0; user-select: none;
+}
+.toolbar-title { font-weight: 700; font-size: 14px; margin-right: 6px; white-space: nowrap; letter-spacing: -0.2px; }
+.toolbar-subtitle { font-size: 11px; opacity: 0.7; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 12px; white-space: nowrap; }
+.toolbar-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 2px; }
+.tb-btn {
+  background: rgba(255,255,255,0.12); color: white;
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
+  padding: 4px 11px; cursor: pointer; font-size: 11px; font-weight: 500;
+  white-space: nowrap; transition: background 0.15s; font-family: var(--font);
+}
+.tb-btn:hover { background: rgba(255,255,255,0.22); }
+.tb-btn.active { background: #FFC107; color: #1a1a1a; border-color: #FFC107; }
+.spacer { flex: 1; }
+
+/* ── Layout ── */
+.workflow-body { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.phase-nav {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; padding: 0 20px; gap: 2px; overflow-x: auto; flex-shrink: 0;
+}
+.phase-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 18px; border: none; background: none; cursor: pointer;
+  border-bottom: 3px solid transparent; color: var(--muted);
+  font-size: 13px; font-weight: 500; white-space: nowrap;
+  transition: all 0.15s; font-family: var(--font);
+}
+.phase-btn:hover { color: var(--text); background: #f8fafc; }
+.phase-btn.active { color: var(--cgs-blue); border-bottom-color: var(--cgs-blue); font-weight: 600; }
+.phase-num {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0;
+}
+.phase-btn.active .phase-num { background: var(--cgs-blue); color: white; }
+
+.workflow-content { display: flex; flex: 1; overflow: hidden; }
+.diagram-area { flex: 1; overflow: auto; padding: 20px 28px; }
+
+/* ── Legend ── */
+.legend { display: flex; gap: 18px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.ldot { width: 9px; height: 9px; border-radius: 50%; }
+
+/* ── Phase header ── */
+.phase-header { margin-bottom: 16px; }
+.phase-header h2 { font-size: 20px; font-weight: 700; }
+.phase-header p { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+/* ── Flow header ── */
+.flow-header {
+  background: #f8fafc; border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 16px; margin-bottom: 10px; font-size: 12px; color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.flow-header-label { font-weight: 700; }
+
+/* ── Swimlanes ── */
+.swimlane-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.swimlane-wrap + .swimlane-wrap { margin-top: 16px; }
+.swimlane-row {
+  display: flex; border-bottom: 1px solid var(--border); min-height: 90px;
+}
+.swimlane-row:last-child { border-bottom: none; }
+.lane-label {
+  width: 148px; min-width: 148px; padding: 16px 14px;
+  display: flex; flex-direction: column; justify-content: center;
+  border-right: 2px solid var(--border); font-size: 11.5px; font-weight: 700;
+}
+.lane-label .lname { font-size: 11.5px; font-weight: 700; }
+.lane-label .lsub { font-size: 10.5px; font-weight: 400; opacity: 0.65; margin-top: 2px; }
+.lane-body {
+  flex: 1; padding: 16px 20px; display: flex; align-items: center;
+  flex-wrap: nowrap; gap: 0; overflow-x: auto;
+}
+
+/* ── Steps ── */
+.step {
+  background: white; border: 2px solid; border-radius: 8px;
+  padding: 9px 13px; min-width: 148px; max-width: 190px;
+  text-align: center; cursor: pointer; flex-shrink: 0;
+  transition: box-shadow 0.15s, transform 0.15s, outline 0.1s;
+  position: relative;
+}
+.step:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.1); transform: translateY(-1px); }
+.step.step-selected { outline: 3px solid #FFC107; outline-offset: 2px; }
+.step.edit-mode-active:hover { box-shadow: 0 4px 14px rgba(255,193,7,0.35); }
+.stitle { font-size: 11.5px; font-weight: 700; line-height: 1.3; }
+.ssub { font-size: 10.5px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
+.arrow { width: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+.add-step-btn {
+  background: rgba(255,255,255,0.8); border: 2px dashed #cbd5e1; border-radius: 8px;
+  padding: 8px 12px; cursor: pointer; font-size: 11px; font-weight: 600;
+  color: #94a3b8; white-space: nowrap; flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  font-family: var(--font);
+}
+.add-step-btn:hover { border-color: #FFC107; color: #92400e; background: #fffbeb; }
+
+/* Lane colors */
+.lane-admin .lane-label { background: var(--admin-bg); color: var(--admin-color); }
+.lane-admin .step { border-color: var(--admin-color); }
+.lane-admin .arrow { color: var(--admin-color); }
+.lane-user .lane-label { background: var(--user-bg); color: var(--user-color); }
+.lane-user .step { border-color: var(--user-color); }
+.lane-user .arrow { color: var(--user-color); }
+.lane-api .lane-label { background: var(--api-bg); color: var(--api-color); }
+.lane-api .step { border-color: var(--api-color); }
+.lane-api .arrow { color: var(--api-color); }
+.lane-data .lane-label { background: var(--data-bg); color: var(--data-color); }
+.lane-data .step { border-color: var(--data-color); }
+.lane-data .arrow { color: var(--data-color); }
+.lane-process .lane-label { background: var(--process-bg); color: var(--process-color); }
+.lane-process .step { border-color: var(--process-color); }
+.lane-process .arrow { color: var(--process-color); }
+
+/* ── Phase note ── */
+.phase-note {
+  margin-top: 14px; background: #eff6ff; border: 1px solid #bfdbfe;
+  border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #1e40af;
+  display: flex; gap: 8px; line-height: 1.5;
+}
+.phase-note::before { content: 'i'; font-weight: 900; font-style: italic; flex-shrink: 0; margin-top: 1px; }
+
+/* ── Side panel (edit) ── */
+.side-panel {
+  width: 290px; border-left: 1px solid var(--border); overflow-y: auto;
+  background: var(--surface); padding: 14px; display: flex;
+  flex-direction: column; gap: 8px; flex-shrink: 0;
+}
+.panel-label {
+  font-size: 10px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.panel-title { font-weight: 600; font-size: 14px; color: var(--cgs-blue); }
+.inp {
+  padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-md);
+  background: #f8fafc; color: var(--text); font-size: 12px; width: 100%;
+  outline: none; font-family: var(--font); transition: border-color 0.15s;
+}
+.inp:focus { border-color: var(--cgs-blue); }
+.icon-btn {
+  background: none; border: none; cursor: pointer; font-size: 14px;
+  padding: 2px 5px; line-height: 1; color: var(--muted); border-radius: 3px;
+  transition: color 0.15s, background 0.15s; font-family: var(--font);
+}
+.icon-btn:hover { color: #cc3300; background: rgba(204,51,0,0.08); }
+.icon-btn.blue { color: var(--cgs-blue); }
+.icon-btn.blue:hover { color: #015a8c; background: rgba(2,115,181,0.1); }
+.icon-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+.action-btn {
+  color: white; border: none; border-radius: 4px; padding: 7px 10px;
+  cursor: pointer; font-size: 12px; font-weight: 500; width: 100%;
+  font-family: var(--font); transition: filter 0.15s;
+}
+.action-btn:hover { filter: brightness(1.1); }
+.field-row { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.field-row .inp { flex: 1; }
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #f1f5f9; border: 1px solid var(--border); border-radius: 4px;
+  padding: 2px 7px; font-size: 10.5px; font-family: 'Consolas', monospace; color: #374151;
+}
+.tag-x { background: none; border: none; cursor: pointer; font-size: 10px; color: #94a3b8; padding: 0; line-height: 1; font-family: var(--font); }
+.tag-x:hover { color: #cc3300; }
+
+/* ── Status bar ── */
+.status-bar {
+  padding: 5px 14px; background: #f8fafc; font-size: 11px; color: var(--muted);
+  border-top: 1px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Detail modal ── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35);
+  z-index: 200; display: flex; align-items: center; justify-content: center;
+}
+.detail-panel {
+  background: white; border-radius: 14px; width: 460px; max-height: 78vh;
+  overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+  padding: 26px 28px; position: relative;
+}
+.detail-panel h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; padding-right: 28px; }
+.dp-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px;
+  text-transform: uppercase; margin-bottom: 14px;
+}
+.dp-desc { font-size: 13.5px; color: #475569; line-height: 1.6; margin-bottom: 14px; }
+.dp-items { list-style: none; margin-bottom: 14px; }
+.dp-items li {
+  font-size: 13px; padding: 7px 0 7px 18px;
+  border-bottom: 1px solid var(--border); position: relative; line-height: 1.5; color: #374151;
+}
+.dp-items li:last-child { border-bottom: none; }
+.dp-items li::before { content: '→'; position: absolute; left: 0; color: var(--cgs-blue); font-weight: 700; }
+.dp-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag {
+  background: #f1f5f9; border: 1px solid var(--border); border-radius: 4px;
+  padding: 2px 7px; font-size: 10.5px; font-family: 'Consolas', monospace; color: #374151;
+}
+.dp-close {
+  position: absolute; top: 18px; right: 18px; background: none; border: none;
+  font-size: 18px; cursor: pointer; color: var(--muted); padding: 2px 6px;
+  border-radius: 4px; line-height: 1;
+}
+.dp-close:hover { background: #f1f5f9; }
+
+/* ── PAT / confirm modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center; z-index: 300;
+}
+.modal {
+  background: var(--surface); border-radius: 10px; padding: 20px; width: 340px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 10px;
+}
+.modal-title { font-weight: 600; font-size: 14px; }
+.modal-sub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.modal-row { display: flex; gap: 8px; }
+
+/* ── Dropdown menu ── */
+.dd-menu {
+  position: absolute; top: calc(100% + 4px); right: 0;
+  background: #015a8c; border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px; overflow: hidden; z-index: 100;
+  min-width: 190px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.dd-item {
+  display: block; width: 100%; border-radius: 0; border: none;
+  text-align: left; padding: 8px 14px; background: rgba(255,255,255,0.12);
+  color: white; cursor: pointer; font-size: 11px; font-weight: 500;
+  white-space: nowrap; font-family: var(--font); transition: background 0.15s;
+}
+.dd-item:hover { background: rgba(255,255,255,0.22); }
+.dd-sep { height: 1px; background: rgba(255,255,255,0.15); margin: 2px 0; }
+
+.loading { display: flex; align-items: center; justify-content: center; height: 100vh; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const { useState, useRef, useEffect, useCallback } = React;
+
+const STORAGE_KEY = 'theray-workflow-v1';
+const PAT_KEY     = 'theray-workflow-pat';
+const GH_REPO     = 'CultivateGeospatial/theray';
+const GH_BRANCH   = 'ERD_Editor';
+const GH_FILE     = 'docs/workflow-editor/working.json';
+
+const LANE_COLORS = {
+  admin:   { color: '#0273B5', bg: '#eff6ff' },
+  user:    { color: '#16a34a', bg: '#f0fdf4' },
+  api:     { color: '#7c3aed', bg: '#faf5ff' },
+  data:    { color: '#b45309', bg: '#fffbeb' },
+  process: { color: '#dc2626', bg: '#fef2f2' },
+};
+
+const LEGEND_ITEMS = [
+  { id: 'admin',   label: 'The Ray Admin' },
+  { id: 'user',    label: 'DOT User' },
+  { id: 'api',     label: 'App Service (.NET + React)' },
+  { id: 'data',    label: 'Azure Blob / PostgreSQL' },
+  { id: 'process', label: 'Processing VM / ArcGIS' },
+];
+
+async function fetchModel() {
+  for (const url of ['./working.json', './default.json']) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return await res.json();
+    } catch(e) {}
+  }
+  return { phases: [] };
+}
+
+async function saveToGitHub(model, pat) {
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(model, null, 2))));
+  const headers = { Authorization: `token ${pat}`, 'Content-Type': 'application/json' };
+  const getRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}`, { headers });
+  let sha;
+  if (getRes.ok) { const d = await getRes.json(); sha = d.sha; }
+  const body = { message: 'chore: update working.json from Workflow Editor', content, branch: GH_BRANCH, ...(sha ? { sha } : {}) };
+  const putRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+    method: 'PUT', headers, body: JSON.stringify(body)
+  });
+  if (!putRes.ok) { const err = await putRes.json(); throw new Error(err.message || 'GitHub API error'); }
+}
+
+// ── Model mutation helpers ──────────────────────────────────────
+function updatePhases(model, phaseIdx, flowIdx, laneIdx, fn) {
+  return {
+    ...model,
+    phases: model.phases.map((ph, pi) => pi !== phaseIdx ? ph : {
+      ...ph,
+      flows: ph.flows.map((fl, fi) => fi !== flowIdx ? fl : {
+        ...fl,
+        lanes: fl.lanes.map((ln, li) => li !== laneIdx ? ln : fn(ln))
+      })
+    })
+  };
+}
+
+function App() {
+  const e = React.createElement;
+
+  const [model,       setModel]       = useState(null);
+  const [activePhase, setActivePhase] = useState(0);
+  const [editMode,    setEditMode]    = useState(false);
+  const [detailStep,  setDetailStep]  = useState(null);
+  const [editCtx,     setEditCtx]     = useState(null); // {phaseIdx,flowIdx,laneIdx,stepIdx}
+  const [saved,       setSaved]       = useState(true);
+  const [pat,         setPat]         = useState(() => localStorage.getItem(PAT_KEY) || '');
+  const [showPat,     setShowPat]     = useState(false);
+  const [patInput,    setPatInput]    = useState('');
+  const [ghStatus,    setGhStatus]    = useState(null);
+  const [ghMsg,       setGhMsg]       = useState('');
+  const [showGhMenu,  setShowGhMenu]  = useState(false);
+  const [newTagVal,   setNewTagVal]   = useState('');
+  const [newItemVal,  setNewItemVal]  = useState('');
+
+  // Load on mount: localStorage → working.json → default.json
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) { setModel(JSON.parse(raw)); return; }
+      } catch(e) {}
+      setModel(await fetchModel());
+    })();
+  }, []);
+
+  // Auto-save to localStorage every 600ms
+  useEffect(() => {
+    if (!model) return;
+    setSaved(false);
+    const t = setTimeout(() => {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(model)); } catch(ex) {}
+      setSaved(true);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [model]);
+
+  // Derive editing step from model + editCtx
+  const editingStep = editCtx && model
+    ? model.phases[editCtx.phaseIdx]?.flows[editCtx.flowIdx]?.lanes[editCtx.laneIdx]?.steps[editCtx.stepIdx]
+    : null;
+
+  // Update a field on the currently-editing step
+  const updateEditField = useCallback((field, value) => {
+    if (!editCtx) return;
+    const { phaseIdx, flowIdx, laneIdx, stepIdx } = editCtx;
+    setModel(m => updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({
+      ...ln,
+      steps: ln.steps.map((s, si) => si !== stepIdx ? s : { ...s, [field]: value })
+    })));
+  }, [editCtx]);
+
+  // Update a list item within step
+  const updateListItem = useCallback((field, idx, value) => {
+    if (!editCtx || !editingStep) return;
+    const arr = [...(editingStep[field] || [])];
+    arr[idx] = value;
+    updateEditField(field, arr);
+  }, [editCtx, editingStep, updateEditField]);
+
+  const removeListItem = useCallback((field, idx) => {
+    if (!editCtx || !editingStep) return;
+    updateEditField(field, (editingStep[field] || []).filter((_, i) => i !== idx));
+  }, [editCtx, editingStep, updateEditField]);
+
+  const addListItem = useCallback((field, value) => {
+    if (!editCtx || !editingStep || !value.trim()) return;
+    updateEditField(field, [...(editingStep[field] || []), value.trim()]);
+  }, [editCtx, editingStep, updateEditField]);
+
+  const moveListItem = useCallback((field, idx, dir) => {
+    if (!editCtx || !editingStep) return;
+    const arr = [...(editingStep[field] || [])];
+    const ni = idx + dir;
+    if (ni < 0 || ni >= arr.length) return;
+    [arr[idx], arr[ni]] = [arr[ni], arr[idx]];
+    updateEditField(field, arr);
+  }, [editCtx, editingStep, updateEditField]);
+
+  const moveStep = useCallback((dir) => {
+    if (!editCtx) return;
+    const { phaseIdx, flowIdx, laneIdx, stepIdx } = editCtx;
+    const newIdx = stepIdx + dir;
+    setModel(m => {
+      const lane = m.phases[phaseIdx].flows[flowIdx].lanes[laneIdx];
+      if (newIdx < 0 || newIdx >= lane.steps.length) return m;
+      const steps = [...lane.steps];
+      [steps[stepIdx], steps[newIdx]] = [steps[newIdx], steps[stepIdx]];
+      return updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({ ...ln, steps }));
+    });
+    setEditCtx(c => ({ ...c, stepIdx: c.stepIdx + dir }));
+  }, [editCtx]);
+
+  const deleteStep = useCallback(() => {
+    if (!editCtx) return;
+    if (!window.confirm('Delete this step?')) return;
+    const { phaseIdx, flowIdx, laneIdx, stepIdx } = editCtx;
+    setModel(m => updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({
+      ...ln, steps: ln.steps.filter((_, si) => si !== stepIdx)
+    })));
+    setEditCtx(null);
+  }, [editCtx]);
+
+  const addStep = useCallback((phaseIdx, flowIdx, laneIdx) => {
+    setModel(m => {
+      const lane = m.phases[phaseIdx].flows[flowIdx].lanes[laneIdx];
+      const newStep = {
+        key: 'step_' + Date.now(),
+        label: 'New Step',
+        sublabel: '',
+        badge: 'Badge',
+        badgeColor: '#64748b',
+        desc: '',
+        items: [],
+        tags: [],
+        connectors: []
+      };
+      const newIdx = lane.steps.length;
+      // schedule editCtx update after model settles
+      setTimeout(() => {
+        setEditCtx({ phaseIdx, flowIdx, laneIdx, stepIdx: newIdx });
+        setNewTagVal(''); setNewItemVal('');
+      }, 0);
+      return updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({
+        ...ln, steps: [...ln.steps, newStep]
+      }));
+    });
+  }, []);
+
+  const handleStepClick = useCallback((phaseIdx, flowIdx, laneIdx, stepIdx, step) => {
+    if (editMode) {
+      setEditCtx({ phaseIdx, flowIdx, laneIdx, stepIdx });
+      setNewTagVal('');
+      setNewItemVal('');
+    } else {
+      setDetailStep(step);
+    }
+  }, [editMode]);
+
+  const pushToGitHub = useCallback(async () => {
+    if (!pat) { setShowPat(true); return; }
+    setGhStatus('saving'); setGhMsg('');
+    try {
+      await saveToGitHub(model, pat);
+      setGhStatus('ok');
+      setTimeout(() => setGhStatus(null), 3000);
+    } catch(err) {
+      setGhStatus('error'); setGhMsg(err.message);
+    }
+  }, [model, pat]);
+
+  const savePat = useCallback(() => {
+    const t = patInput.trim();
+    localStorage.setItem(PAT_KEY, t);
+    setPat(t); setPatInput(''); setShowPat(false);
+  }, [patInput]);
+
+  const resetToDefault = useCallback(async () => {
+    if (!window.confirm('Reset to default? Local changes will be lost.')) return;
+    try {
+      const res = await fetch('./default.json');
+      if (res.ok) { localStorage.removeItem(STORAGE_KEY); setModel(await res.json()); setEditCtx(null); return; }
+    } catch(ex) {}
+    alert('Could not load default.json');
+  }, []);
+
+  const loadFromRepo = useCallback(async () => {
+    if (!window.confirm('Load latest from repo? Local changes will be lost.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    setModel(null); setEditCtx(null);
+    setModel(await fetchModel());
+  }, []);
+
+  const exportJSON = useCallback(() => {
+    const b = new Blob([JSON.stringify(model, null, 2)], { type: 'application/json' });
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a'); a.href = u; a.download = 'working.json'; a.click();
+    URL.revokeObjectURL(u);
+  }, [model]);
+
+  if (!model) return e('div', { className: 'loading' }, 'Loading workflow…');
+
+  const phase = model.phases[activePhase];
+  const laneCount = phase ? phase.flows.reduce((s, f) => s + f.lanes.length, 0) : 0;
+
+  // ── Render helpers ──
+  const renderStep = (step, phaseIdx, flowIdx, laneIdx, stepIdx, laneId) => {
+    const isSelected = editCtx &&
+      editCtx.phaseIdx === phaseIdx && editCtx.flowIdx === flowIdx &&
+      editCtx.laneIdx === laneIdx && editCtx.stepIdx === stepIdx;
+    return e('div', {
+      key: step.key || stepIdx,
+      className: `step${isSelected ? ' step-selected' : ''}${editMode ? ' edit-mode-active' : ''}`,
+      title: editMode ? 'Click to edit' : step.sublabel || '',
+      onClick: () => handleStepClick(phaseIdx, flowIdx, laneIdx, stepIdx, step)
+    },
+      e('div', { className: 'stitle' }, step.label),
+      step.sublabel && e('div', { className: 'ssub' }, step.sublabel)
+    );
+  };
+
+  const renderLane = (lane, phaseIdx, flowIdx, laneIdx) => {
+    const lc = LANE_COLORS[lane.id] || { color: '#64748b', bg: '#f8fafc' };
+    return e('div', { key: lane.id, className: `swimlane-row lane-${lane.id}` },
+      e('div', {
+        className: 'lane-label',
+        style: { background: lc.bg, color: lc.color }
+      },
+        e('div', { className: 'lname' }, lane.label),
+        lane.sublabel && e('div', { className: 'lsub' }, lane.sublabel)
+      ),
+      e('div', { className: 'lane-body' },
+        ...lane.steps.flatMap((step, stepIdx) => {
+          const nodes = [];
+          if (stepIdx > 0) nodes.push(e('div', { key: `arr-${stepIdx}`, className: 'arrow' }, '→'));
+          nodes.push(renderStep(step, phaseIdx, flowIdx, laneIdx, stepIdx, lane.id));
+          return nodes;
+        }),
+        editMode && e('div', { key: 'add-wrap', style: { display: 'flex', alignItems: 'center', marginLeft: lane.steps.length > 0 ? 0 : 0 } },
+          lane.steps.length > 0 && e('div', { className: 'arrow', style: { color: '#cbd5e1' } }, '→'),
+          e('button', {
+            className: 'add-step-btn',
+            onClick: () => addStep(phaseIdx, flowIdx, laneIdx)
+          }, '+ Step')
+        )
+      )
+    );
+  };
+
+  const renderFlow = (flow, phaseIdx, flowIdx, isMultiFlow, isLast) => {
+    return e('div', { key: flow.id },
+      isMultiFlow && e('div', { className: 'flow-header' },
+        e('span', {
+          className: 'flow-header-label',
+          style: { color: flow.id === 'A' ? '#0273B5' : flow.id === 'B' ? '#16a34a' : '#64748b' }
+        }, `${flow.id} — ${flow.label || ''}`),
+        flow.description && e('span', null, flow.description)
+      ),
+      e('div', {
+        className: 'swimlane-wrap',
+        style: { marginBottom: isLast ? 0 : 16 }
+      },
+        flow.lanes.map((lane, laneIdx) => renderLane(lane, phaseIdx, flowIdx, laneIdx))
+      )
+    );
+  };
+
+  // ── Edit panel ──
+  const renderEditPanel = () => {
+    if (!editCtx || !editingStep) return null;
+    const step = editingStep;
+    const laneData = model.phases[editCtx.phaseIdx]?.flows[editCtx.flowIdx]?.lanes[editCtx.laneIdx];
+    const stepCount = laneData ? laneData.steps.length : 0;
+
+    return e('div', { className: 'side-panel' },
+      e('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+        e('div', { className: 'panel-label' }, 'Edit Step'),
+        e('button', { className: 'icon-btn', title: 'Close', onClick: () => setEditCtx(null) }, '→')
+      ),
+
+      e('div', { className: 'panel-label' }, 'Label'),
+      e('input', { className: 'inp', value: step.label || '', onChange: ev => updateEditField('label', ev.target.value) }),
+
+      e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Sublabel'),
+      e('input', { className: 'inp', value: step.sublabel || '', onChange: ev => updateEditField('sublabel', ev.target.value) }),
+
+      e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Badge'),
+      e('input', { className: 'inp', value: step.badge || '', onChange: ev => updateEditField('badge', ev.target.value) }),
+
+      e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Description'),
+      e('textarea', {
+        className: 'inp', value: step.desc || '', rows: 4,
+        style: { resize: 'vertical', lineHeight: 1.5 },
+        onChange: ev => updateEditField('desc', ev.target.value)
+      }),
+
+      e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Bullet Items'),
+      ...(step.items || []).map((item, i) =>
+        e('div', { key: i, className: 'field-row' },
+          e('input', {
+            className: 'inp', value: item,
+            onChange: ev => updateListItem('items', i, ev.target.value)
+          }),
+          e('button', { className: 'icon-btn blue', title: 'Up', disabled: i === 0, onClick: () => moveListItem('items', i, -1) }, '▲'),
+          e('button', { className: 'icon-btn blue', title: 'Down', disabled: i === (step.items || []).length - 1, onClick: () => moveListItem('items', i, 1) }, '▼'),
+          e('button', { className: 'icon-btn', title: 'Delete', onClick: () => removeListItem('items', i) }, '🗑')
+        )
+      ),
+      e('div', { className: 'field-row', style: { marginTop: 4 } },
+        e('input', {
+          className: 'inp', placeholder: 'Add item…', value: newItemVal,
+          onChange: ev => setNewItemVal(ev.target.value),
+          onKeyDown: ev => { if (ev.key === 'Enter') { addListItem('items', newItemVal); setNewItemVal(''); } }
+        }),
+        e('button', {
+          className: 'icon-btn blue', title: 'Add',
+          onClick: () => { addListItem('items', newItemVal); setNewItemVal(''); }
+        }, '+')
+      ),
+
+      e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Tags'),
+      e('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 4 } },
+        ...(step.tags || []).map((tag, i) =>
+          e('span', { key: i, className: 'tag-chip' },
+            tag,
+            e('button', { className: 'tag-x', onClick: () => removeListItem('tags', i) }, '✕')
+          )
+        )
+      ),
+      e('div', { className: 'field-row' },
+        e('input', {
+          className: 'inp', placeholder: 'Add tag…', value: newTagVal,
+          onChange: ev => setNewTagVal(ev.target.value),
+          onKeyDown: ev => { if (ev.key === 'Enter') { addListItem('tags', newTagVal); setNewTagVal(''); } }
+        }),
+        e('button', {
+          className: 'icon-btn blue', title: 'Add tag',
+          onClick: () => { addListItem('tags', newTagVal); setNewTagVal(''); }
+        }, '+')
+      ),
+
+      e('div', { style: { borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8 } }),
+      e('div', { className: 'panel-label' }, 'Position in Lane'),
+      e('div', { style: { display: 'flex', gap: 4 } },
+        e('button', {
+          className: 'action-btn', style: { background: '#7c3aed' },
+          disabled: editCtx.stepIdx === 0,
+          onClick: () => moveStep(-1)
+        }, '▲ Up'),
+        e('button', {
+          className: 'action-btn', style: { background: '#7c3aed' },
+          disabled: editCtx.stepIdx >= stepCount - 1,
+          onClick: () => moveStep(1)
+        }, '▼ Down')
+      ),
+      e('button', {
+        className: 'action-btn', style: { background: '#cc3300', marginTop: 6 },
+        onClick: deleteStep
+      }, '🗑 Delete Step')
+    );
+  };
+
+  // ── Main render ──
+  return e('div', { id: 'app-root', onClick: () => setShowGhMenu(false) },
+
+    // Toolbar
+    e('div', { className: 'toolbar', onClick: ev => ev.stopPropagation() },
+      e('span', { className: 'toolbar-title' }, 'The Ray'),
+      e('span', { className: 'toolbar-subtitle' }, 'System Workflow'),
+      e('div', { className: 'toolbar-divider' }),
+      e('button', {
+        className: `tb-btn${editMode ? ' active' : ''}`,
+        onClick: () => { setEditMode(m => !m); setEditCtx(null); }
+      }, editMode ? '✎ Edit Mode ON' : '✎ Edit Mode'),
+      e('div', { className: 'spacer' }),
+
+      // GitHub dropdown
+      e('div', { style: { position: 'relative' } },
+        e('button', {
+          className: 'tb-btn',
+          style: ghStatus === 'ok' ? { background: '#22c55e', borderColor: '#22c55e' }
+               : ghStatus === 'error' ? { background: '#cc3300', borderColor: '#cc3300' } : {},
+          onClick: ev => { ev.stopPropagation(); setShowGhMenu(m => !m); }
+        }, ghStatus === 'ok' ? '✓ GitHub ▾' : ghStatus === 'error' ? '✕ GitHub ▾' : 'GitHub ▾'),
+        showGhMenu && e('div', { className: 'dd-menu' },
+          e('button', { className: 'dd-item', onClick: () => { pushToGitHub(); setShowGhMenu(false); } },
+            ghStatus === 'saving' ? 'Saving…' : '↑ Save to GitHub'),
+          e('button', { className: 'dd-item', onClick: () => { loadFromRepo(); setShowGhMenu(false); } }, '↻ Load from Repo'),
+          e('button', { className: 'dd-item', onClick: () => { resetToDefault(); setShowGhMenu(false); } }, '↺ Reset to Default'),
+          e('div', { className: 'dd-sep' }),
+          e('button', { className: 'dd-item', onClick: () => { setPatInput(pat); setShowPat(true); setShowGhMenu(false); } }, '🔑 Set Token'),
+          e('button', { className: 'dd-item', onClick: () => { exportJSON(); setShowGhMenu(false); } }, '↓ Download JSON')
+        )
+      )
+    ),
+
+    // Body
+    e('div', { className: 'workflow-body' },
+      // Phase nav
+      e('nav', { className: 'phase-nav' },
+        model.phases.map((ph, i) =>
+          e('button', {
+            key: i,
+            className: `phase-btn${activePhase === i ? ' active' : ''}`,
+            onClick: () => { setActivePhase(i); setEditCtx(null); }
+          },
+            e('span', { className: 'phase-num' }, ph.id),
+            ph.label
+          )
+        )
+      ),
+
+      // Content
+      e('div', { className: 'workflow-content' },
+        e('div', { className: 'diagram-area' },
+          // Legend
+          e('div', { className: 'legend' },
+            LEGEND_ITEMS.map(li =>
+              e('div', { key: li.id, className: 'legend-item' },
+                e('div', { className: 'ldot', style: { background: LANE_COLORS[li.id].color } }),
+                li.label
+              )
+            )
+          ),
+
+          // Phase header
+          phase && e('div', { className: 'phase-header' },
+            e('h2', null, `Phase ${phase.id}: ${phase.label}`),
+            phase.sublabel && e('p', null, phase.sublabel)
+          ),
+
+          // Flows
+          phase && phase.flows.map((flow, flowIdx) =>
+            renderFlow(flow, activePhase, flowIdx, phase.flows.length > 1, flowIdx === phase.flows.length - 1)
+          ),
+
+          // Phase note
+          phase && phase.note && e('div', { className: 'phase-note' }, phase.note)
+        ),
+
+        // Edit panel
+        editMode && renderEditPanel()
+      )
+    ),
+
+    // Status bar
+    e('div', { className: 'status-bar' },
+      e('div', { className: 'dot', style: { background: saved ? '#22c55e' : '#f59e0b' } }),
+      e('span', null, saved ? 'Auto-saved to browser' : 'Saving…'),
+      ghStatus === 'error' && e('span', { style: { color: '#cc3300', marginLeft: 8 } }, `GitHub error: ${ghMsg}`),
+      !pat && ghStatus !== 'error' && e('span', { style: { color: '#f59e0b', marginLeft: 8 } }, '· Set a GitHub token (🔑) to save to the repo'),
+      e('span', { style: { marginLeft: 'auto' } },
+        editMode
+          ? (editCtx ? `Editing step — ${laneCount} lane(s) in this phase` : 'Edit mode — click a step to edit')
+          : 'Click a step for details · Use Edit Mode to modify'
+      )
+    ),
+
+    // Detail modal (view mode)
+    detailStep && !editMode && e('div', {
+      className: 'overlay',
+      onClick: () => setDetailStep(null)
+    },
+      e('div', { className: 'detail-panel', onClick: ev => ev.stopPropagation() },
+        e('button', { className: 'dp-close', onClick: () => setDetailStep(null) }, '✕'),
+        e('h3', null, detailStep.label),
+        detailStep.badge && e('div', {
+          className: 'dp-badge',
+          style: {
+            background: (detailStep.badgeColor || '#64748b') + '22',
+            color: detailStep.badgeColor || '#64748b'
+          }
+        }, detailStep.badge),
+        detailStep.desc && e('p', { className: 'dp-desc' }, detailStep.desc),
+        detailStep.items && detailStep.items.length > 0 && e('ul', { className: 'dp-items' },
+          detailStep.items.map((item, i) => e('li', { key: i }, item))
+        ),
+        detailStep.tags && detailStep.tags.length > 0 && e('div', { className: 'dp-tags' },
+          detailStep.tags.map((tag, i) => e('span', { key: i, className: 'tag' }, tag))
+        )
+      )
+    ),
+
+    // PAT modal
+    showPat && e('div', { className: 'modal-overlay' },
+      e('div', { className: 'modal' },
+        e('div', { className: 'modal-title' }, 'GitHub Token'),
+        e('div', { className: 'modal-sub' }, 'Create a fine-grained PAT at github.com/settings/tokens with Contents: Read & Write for CultivateGeospatial/theray. Stored in your browser only.'),
+        e('input', {
+          className: 'inp', placeholder: 'github_pat_…', value: patInput, autoFocus: true,
+          onChange: ev => setPatInput(ev.target.value),
+          onKeyDown: ev => { if (ev.key === 'Enter') savePat(); if (ev.key === 'Escape') setShowPat(false); }
+        }),
+        e('div', { className: 'modal-row' },
+          e('button', { className: 'action-btn', style: { background: '#0273B5' }, onClick: savePat }, 'Save Token'),
+          pat && e('button', { className: 'action-btn', style: { background: '#cc3300' }, onClick: () => { localStorage.removeItem(PAT_KEY); setPat(''); setShowPat(false); } }, 'Clear Token'),
+          e('button', { className: 'action-btn', style: { background: '#888' }, onClick: () => setShowPat(false) }, 'Cancel')
+        )
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(React.createElement(App));
+</script>
+</body>
+</html>
