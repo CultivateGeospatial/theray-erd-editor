@@ -3,42 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Ray — Workflow Editor</title>
+<title>The Ray — ERD Editor</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root {
-  --bg: #f0f4f8;
-  --surface: #ffffff;
-  --text: #1e293b;
-  --muted: #64748b;
-  --border: #e2e8f0;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border: rgba(0,0,0,0.10);
   --border-md: rgba(0,0,0,0.18);
-  --cgs-blue: #0273B5;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --admin-color: #0273B5;  --admin-bg: #eff6ff;
-  --user-color: #16a34a;   --user-bg: #f0fdf4;
-  --api-color: #7c3aed;    --api-bg: #faf5ff;
-  --data-color: #b45309;   --data-bg: #fffbeb;
-  --process-color: #dc2626;--process-bg: #fef2f2;
 }
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { height: 100%; background: var(--bg); }
-body { font-family: var(--font); font-size: 13px; color: var(--text); display: flex; flex-direction: column; }
-#app { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-#app-root { display: flex; flex-direction: column; height: 100%; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1e2433;
+    --bg-secondary: #252b3b;
+    --bg-tertiary: #181d2a;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --border: rgba(255,255,255,0.08);
+    --border-md: rgba(255,255,255,0.15);
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: var(--bg-tertiary); }
+body { font-family: var(--font); font-size: 13px; color: var(--text-primary); }
+#app { height: 100vh; display: flex; flex-direction: column; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 3px; }
 
-/* ── Toolbar ── */
 .toolbar {
   display: flex; align-items: center; gap: 6px;
-  padding: 8px 14px; background: var(--cgs-blue); color: white;
+  padding: 8px 14px; background: #0273B5; color: white;
   flex-shrink: 0; user-select: none;
 }
-.toolbar-title { font-weight: 700; font-size: 14px; margin-right: 6px; white-space: nowrap; letter-spacing: -0.2px; }
-.toolbar-subtitle { font-size: 11px; opacity: 0.7; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 12px; white-space: nowrap; }
+.toolbar-title { font-weight: 600; font-size: 13px; margin-right: 6px; white-space: nowrap; }
 .toolbar-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 2px; }
 .tb-btn {
   background: rgba(255,255,255,0.12); color: white;
@@ -50,235 +54,141 @@ body { font-family: var(--font); font-size: 13px; color: var(--text); display: f
 .tb-btn.active { background: #FFC107; color: #1a1a1a; border-color: #FFC107; }
 .spacer { flex: 1; }
 
-/* ── Layout ── */
-.workflow-body { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-.phase-nav {
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  display: flex; padding: 0 20px; gap: 2px; overflow-x: auto; flex-shrink: 0;
-}
-.phase-btn {
-  display: flex; align-items: center; gap: 8px;
-  padding: 12px 18px; border: none; background: none; cursor: pointer;
-  border-bottom: 3px solid transparent; color: var(--muted);
-  font-size: 13px; font-weight: 500; white-space: nowrap;
-  transition: all 0.15s; font-family: var(--font);
-}
-.phase-btn:hover { color: var(--text); background: #f8fafc; }
-.phase-btn.active { color: var(--cgs-blue); border-bottom-color: var(--cgs-blue); font-weight: 600; }
-.phase-num {
-  width: 22px; height: 22px; border-radius: 50%; background: var(--bg);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0;
-}
-.phase-btn.active .phase-num { background: var(--cgs-blue); color: white; }
+.main { display: flex; flex: 1; overflow: hidden; }
+.canvas-wrap { flex: 1; overflow: auto; background: var(--bg-tertiary); }
 
-.workflow-content { display: flex; flex: 1; overflow: hidden; }
-.diagram-area { flex: 1; overflow: auto; padding: 20px 28px; }
-
-/* ── Legend ── */
-.legend { display: flex; gap: 18px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
-.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.ldot { width: 9px; height: 9px; border-radius: 50%; }
-
-/* ── Phase header ── */
-.phase-header { margin-bottom: 16px; }
-.phase-header h2 { font-size: 20px; font-weight: 700; }
-.phase-header p { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
-
-/* ── Flow header ── */
-.flow-header {
-  background: #f8fafc; border: 1px solid var(--border); border-radius: 8px;
-  padding: 8px 16px; margin-bottom: 10px; font-size: 12px; color: var(--muted);
-  display: flex; align-items: center; gap: 8px;
-}
-.flow-header-label { font-weight: 700; }
-
-/* ── Swimlanes ── */
-.swimlane-wrap {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; overflow: hidden;
-}
-.swimlane-wrap + .swimlane-wrap { margin-top: 16px; }
-.swimlane-row {
-  display: flex; border-bottom: 1px solid var(--border); min-height: 90px;
-}
-.swimlane-row:last-child { border-bottom: none; }
-.lane-label {
-  width: 148px; min-width: 148px; padding: 16px 14px;
-  display: flex; flex-direction: column; justify-content: center;
-  border-right: 2px solid var(--border); font-size: 11.5px; font-weight: 700;
-}
-.lane-label .lname { font-size: 11.5px; font-weight: 700; }
-.lane-label .lsub { font-size: 10.5px; font-weight: 400; opacity: 0.65; margin-top: 2px; }
-.lane-body {
-  flex: 1; padding: 16px 20px; display: flex; align-items: center;
-  flex-wrap: nowrap; gap: 0; overflow-x: auto;
-}
-
-/* ── Steps ── */
-.step {
-  background: white; border: 2px solid; border-radius: 8px;
-  padding: 9px 13px; min-width: 148px; max-width: 190px;
-  text-align: center; cursor: pointer; flex-shrink: 0;
-  transition: box-shadow 0.15s, transform 0.15s, outline 0.1s;
-  position: relative;
-}
-.step:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.1); transform: translateY(-1px); }
-.step.step-selected { outline: 3px solid #FFC107; outline-offset: 2px; }
-.step.edit-mode-active:hover { box-shadow: 0 4px 14px rgba(255,193,7,0.35); }
-.stitle { font-size: 11.5px; font-weight: 700; line-height: 1.3; }
-.ssub { font-size: 10.5px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
-.arrow { width: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
-.add-step-btn {
-  background: rgba(255,255,255,0.8); border: 2px dashed #cbd5e1; border-radius: 8px;
-  padding: 8px 12px; cursor: pointer; font-size: 11px; font-weight: 600;
-  color: #94a3b8; white-space: nowrap; flex-shrink: 0;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-  font-family: var(--font);
-}
-.add-step-btn:hover { border-color: #FFC107; color: #92400e; background: #fffbeb; }
-
-/* Lane colors */
-.lane-admin .lane-label { background: var(--admin-bg); color: var(--admin-color); }
-.lane-admin .step { border-color: var(--admin-color); }
-.lane-admin .arrow { color: var(--admin-color); }
-.lane-user .lane-label { background: var(--user-bg); color: var(--user-color); }
-.lane-user .step { border-color: var(--user-color); }
-.lane-user .arrow { color: var(--user-color); }
-.lane-api .lane-label { background: var(--api-bg); color: var(--api-color); }
-.lane-api .step { border-color: var(--api-color); }
-.lane-api .arrow { color: var(--api-color); }
-.lane-data .lane-label { background: var(--data-bg); color: var(--data-color); }
-.lane-data .step { border-color: var(--data-color); }
-.lane-data .arrow { color: var(--data-color); }
-.lane-process .lane-label { background: var(--process-bg); color: var(--process-color); }
-.lane-process .step { border-color: var(--process-color); }
-.lane-process .arrow { color: var(--process-color); }
-
-/* ── Phase note ── */
-.phase-note {
-  margin-top: 14px; background: #eff6ff; border: 1px solid #bfdbfe;
-  border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #1e40af;
-  display: flex; gap: 8px; line-height: 1.5;
-}
-.phase-note::before { content: 'i'; font-weight: 900; font-style: italic; flex-shrink: 0; margin-top: 1px; }
-
-/* ── Side panel (edit) ── */
 .side-panel {
-  width: 290px; border-left: 1px solid var(--border); overflow-y: auto;
-  background: var(--surface); padding: 14px; display: flex;
-  flex-direction: column; gap: 8px; flex-shrink: 0;
+  width: 275px; border-left: 1px solid var(--border);
+  overflow-y: auto; background: var(--bg-primary);
+  padding: 14px; display: flex; flex-direction: column;
+  gap: 10px; flex-shrink: 0;
 }
 .panel-label {
-  font-size: 10px; font-weight: 600; color: var(--muted);
+  font-size: 10px; font-weight: 600; color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: 0.07em;
 }
-.panel-title { font-weight: 600; font-size: 14px; color: var(--cgs-blue); }
-.inp {
-  padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-md);
-  background: #f8fafc; color: var(--text); font-size: 12px; width: 100%;
-  outline: none; font-family: var(--font); transition: border-color 0.15s;
+.panel-title {
+  font-weight: 600; font-size: 14px; color: #0273B5;
+  display: flex; align-items: center; gap: 6px;
 }
-.inp:focus { border-color: var(--cgs-blue); }
+.field-row {
+  border-bottom: 1px solid var(--border);
+  padding: 6px 0; display: flex; align-items: flex-start; gap: 6px;
+}
+.field-inputs { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.inp {
+  padding: 5px 8px; border-radius: 4px;
+  border: 1px solid var(--border-md);
+  background: var(--bg-secondary); color: var(--text-primary);
+  font-size: 12px; width: 100%; outline: none; font-family: var(--font);
+  transition: border-color 0.15s;
+}
+.inp:focus { border-color: #0273B5; }
+.sel {
+  padding: 4px 5px; border-radius: 4px;
+  border: 1px solid var(--border-md);
+  background: var(--bg-secondary); color: var(--text-primary);
+  font-size: 11px; flex: 1; outline: none; font-family: var(--font);
+}
+.row2 { display: flex; gap: 4px; }
 .icon-btn {
-  background: none; border: none; cursor: pointer; font-size: 14px;
-  padding: 2px 5px; line-height: 1; color: var(--muted); border-radius: 3px;
-  transition: color 0.15s, background 0.15s; font-family: var(--font);
+  background: none; border: none; cursor: pointer;
+  font-size: 14px; padding: 2px 5px; line-height: 1;
+  color: var(--text-secondary); border-radius: 3px;
+  transition: color 0.15s, background 0.15s;
 }
 .icon-btn:hover { color: #cc3300; background: rgba(204,51,0,0.08); }
-.icon-btn.blue { color: var(--cgs-blue); }
+.icon-btn.blue { color: #0273B5; }
 .icon-btn.blue:hover { color: #015a8c; background: rgba(2,115,181,0.1); }
-.icon-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 .action-btn {
-  color: white; border: none; border-radius: 4px; padding: 7px 10px;
-  cursor: pointer; font-size: 12px; font-weight: 500; width: 100%;
-  font-family: var(--font); transition: filter 0.15s;
+  color: white; border: none; border-radius: 4px;
+  padding: 7px 10px; cursor: pointer; font-size: 12px;
+  font-weight: 500; width: 100%; font-family: var(--font);
+  transition: filter 0.15s;
 }
 .action-btn:hover { filter: brightness(1.1); }
-.field-row { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
-.field-row .inp { flex: 1; }
-.tag-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  background: #f1f5f9; border: 1px solid var(--border); border-radius: 4px;
-  padding: 2px 7px; font-size: 10.5px; font-family: 'Consolas', monospace; color: #374151;
+.add-field-box {
+  background: var(--bg-secondary); border-radius: 6px;
+  padding: 10px; display: flex; flex-direction: column; gap: 6px;
 }
-.tag-x { background: none; border: none; cursor: pointer; font-size: 10px; color: #94a3b8; padding: 0; line-height: 1; font-family: var(--font); }
-.tag-x:hover { color: #cc3300; }
 
-/* ── Status bar ── */
 .status-bar {
-  padding: 5px 14px; background: #f8fafc; font-size: 11px; color: var(--muted);
-  border-top: 1px solid var(--border); flex-shrink: 0;
-  display: flex; align-items: center; gap: 8px;
+  padding: 5px 14px; background: var(--bg-secondary);
+  font-size: 11px; color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0; display: flex; align-items: center; gap: 8px;
 }
 .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-/* ── Detail modal ── */
-.overlay {
-  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35);
-  z-index: 200; display: flex; align-items: center; justify-content: center;
-}
-.detail-panel {
-  background: white; border-radius: 14px; width: 460px; max-height: 78vh;
-  overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,0.18);
-  padding: 26px 28px; position: relative;
-}
-.detail-panel h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; padding-right: 28px; }
-.dp-badge {
-  display: inline-block; padding: 3px 10px; border-radius: 20px;
-  font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px;
-  text-transform: uppercase; margin-bottom: 14px;
-}
-.dp-desc { font-size: 13.5px; color: #475569; line-height: 1.6; margin-bottom: 14px; }
-.dp-items { list-style: none; margin-bottom: 14px; }
-.dp-items li {
-  font-size: 13px; padding: 7px 0 7px 18px;
-  border-bottom: 1px solid var(--border); position: relative; line-height: 1.5; color: #374151;
-}
-.dp-items li:last-child { border-bottom: none; }
-.dp-items li::before { content: '→'; position: absolute; left: 0; color: var(--cgs-blue); font-weight: 700; }
-.dp-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.tag {
-  background: #f1f5f9; border: 1px solid var(--border); border-radius: 4px;
-  padding: 2px 7px; font-size: 10.5px; font-family: 'Consolas', monospace; color: #374151;
-}
-.dp-close {
-  position: absolute; top: 18px; right: 18px; background: none; border: none;
-  font-size: 18px; cursor: pointer; color: var(--muted); padding: 2px 6px;
-  border-radius: 4px; line-height: 1;
-}
-.dp-close:hover { background: #f1f5f9; }
-
-/* ── PAT / confirm modal ── */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-  display: flex; align-items: center; justify-content: center; z-index: 300;
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
 }
 .modal {
-  background: var(--surface); border-radius: 10px; padding: 20px; width: 340px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 10px;
+  background: var(--bg-primary); border-radius: 10px; padding: 20px;
+  width: 310px; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  display: flex; flex-direction: column; gap: 10px;
 }
 .modal-title { font-weight: 600; font-size: 14px; }
-.modal-sub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.modal-sub { font-size: 12px; color: var(--text-secondary); }
 .modal-row { display: flex; gap: 8px; }
 
-/* ── Dropdown menu ── */
-.dd-menu {
-  position: absolute; top: calc(100% + 4px); right: 0;
-  background: #015a8c; border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 4px; overflow: hidden; z-index: 100;
-  min-width: 190px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+.erd-root {
+  display: flex; flex-direction: column;
+  height: 100%; position: relative; overflow: hidden;
 }
-.dd-item {
-  display: block; width: 100%; border-radius: 0; border: none;
-  text-align: left; padding: 8px 14px; background: rgba(255,255,255,0.12);
-  color: white; cursor: pointer; font-size: 11px; font-weight: 500;
-  white-space: nowrap; font-family: var(--font); transition: background 0.15s;
-}
-.dd-item:hover { background: rgba(255,255,255,0.22); }
-.dd-sep { height: 1px; background: rgba(255,255,255,0.15); margin: 2px 0; }
 
-.loading { display: flex; align-items: center; justify-content: center; height: 100vh; color: var(--muted); font-size: 14px; }
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: var(--text-secondary); font-size: 14px; gap: 10px;
+}
+
+.help-modal {
+  background: var(--bg-primary); border-radius: 10px; padding: 24px 28px;
+  width: 560px; max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  display: flex; flex-direction: column; gap: 18px;
+}
+.help-modal h2 { font-size: 16px; font-weight: 700; color: #0273B5; margin: 0; }
+.help-modal h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-secondary); margin: 0 0 6px 0; }
+.help-modal p  { font-size: 13px; line-height: 1.6; margin: 0; }
+.help-modal ul { font-size: 13px; line-height: 1.7; padding-left: 18px; margin: 0; }
+.help-modal li { margin-bottom: 2px; }
+.help-section { border-top: 1px solid var(--border); padding-top: 14px; }
+.help-badge {
+  display: inline-block; background: var(--bg-secondary);
+  border: 1px solid var(--border-md); border-radius: 4px;
+  padding: 1px 7px; font-size: 11px; font-weight: 600;
+  font-family: var(--font); color: var(--text-primary); white-space: nowrap;
+}
+.help-close-row { display: flex; justify-content: flex-end; margin-top: 4px; }
+
+.json-tooltip {
+  position: fixed; z-index: 200;
+  background: #1e2433; color: #e2e8f0;
+  border: 1px solid #4A8FA8; border-radius: 6px;
+  padding: 10px 12px; font-size: 11px; font-family: monospace;
+  white-space: pre; width: 340px; max-height: 300px; overflow: auto;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.json-tooltip-label {
+  font-size: 10px; font-weight: 700; color: #4A8FA8;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  margin-bottom: 6px; font-family: var(--font);
+}
+.json-def-box {
+  margin-top: 4px;
+}
+.json-def-box textarea {
+  width: 100%; min-height: 80px; resize: vertical;
+  padding: 6px 8px; border-radius: 4px;
+  border: 1px solid var(--border-md);
+  background: #1e2433; color: #e2e8f0;
+  font-size: 11px; font-family: monospace;
+  outline: none; transition: border-color 0.15s;
+}
+.json-def-box textarea:focus { border-color: #4A8FA8; }
 </style>
 </head>
 <body>
@@ -286,27 +196,56 @@ body { font-family: var(--font); font-size: 13px; color: var(--text); display: f
 <script>
 const { useState, useRef, useEffect, useCallback } = React;
 
-const STORAGE_KEY = 'theray-workflow-v1';
-const PAT_KEY     = 'theray-workflow-pat';
+const STORAGE_KEY = 'theray-erd-v1';
+const PAT_KEY     = 'theray-erd-pat';
 const GH_REPO     = 'CultivateGeospatial/theray';
 const GH_BRANCH   = 'ERD_Editor';
-const GH_FILE     = 'docs/workflow-editor/working.json';
+const GH_FILE     = 'docs/erd-editor/working.json';
+const BOX_W = 220, HDR_H = 28, ROW_H = 20, FPAD = 5;
+const FTYPES = ['uuid','string','int','bigint','bool','json','enum','timestamp','float','text'];
+const CONS   = ['','PK','FK','FK nullable','nullable','UNIQUE','NOT NULL','INDEX'];
 
-const LANE_COLORS = {
-  admin:   { color: '#0273B5', bg: '#eff6ff' },
-  user:    { color: '#16a34a', bg: '#f0fdf4' },
-  api:     { color: '#7c3aed', bg: '#faf5ff' },
-  data:    { color: '#b45309', bg: '#fffbeb' },
-  process: { color: '#dc2626', bg: '#fef2f2' },
-};
+function bh(fields) { return HDR_H + fields.length * ROW_H + FPAD * 2; }
 
-const LEGEND_ITEMS = [
-  { id: 'admin',   label: 'The Ray Admin' },
-  { id: 'user',    label: 'DOT User' },
-  { id: 'api',     label: 'App Service (.NET + React)' },
-  { id: 'data',    label: 'Azure Blob / PostgreSQL' },
-  { id: 'process', label: 'Processing VM / ArcGIS' },
-];
+function edgePt(e, side) {
+  const h = bh(e.fields), cx = e.x + BOX_W / 2, cy = e.y + h / 2;
+  if (side === 'left')   return { x: e.x,        y: cy };
+  if (side === 'right')  return { x: e.x + BOX_W, y: cy };
+  if (side === 'top')    return { x: cx, y: e.y };
+  return { x: cx, y: e.y + h };
+}
+
+function pickSides(e1, e2) {
+  const cx1 = e1.x + BOX_W/2, cy1 = e1.y + bh(e1.fields)/2;
+  const cx2 = e2.x + BOX_W/2, cy2 = e2.y + bh(e2.fields)/2;
+  if (Math.abs(cx2-cx1) >= Math.abs(cy2-cy1))
+    return cx2 > cx1 ? ['right','left'] : ['left','right'];
+  return cy2 > cy1 ? ['bottom','top'] : ['top','bottom'];
+}
+
+function relPath(e1, e2) {
+  const [s1,s2] = pickSides(e1, e2);
+  const p1 = edgePt(e1,s1), p2 = edgePt(e2,s2);
+  if ((s1==='left'||s1==='right') && (s2==='left'||s2==='right')) {
+    const mx = (p1.x+p2.x)/2;
+    return `M${p1.x},${p1.y}L${mx},${p1.y}L${mx},${p2.y}L${p2.x},${p2.y}`;
+  }
+  if ((s1==='top'||s1==='bottom') && (s2==='top'||s2==='bottom')) {
+    const my = (p1.y+p2.y)/2;
+    return `M${p1.x},${p1.y}L${p1.x},${my}L${p2.x},${my}L${p2.x},${p2.y}`;
+  }
+  if (s1==='bottom'||s1==='top')
+    return `M${p1.x},${p1.y}L${p1.x},${p2.y}L${p2.x},${p2.y}`;
+  return `M${p1.x},${p1.y}L${p2.x},${p1.y}L${p2.x},${p2.y}`;
+}
+
+function midPt(e1, e2) {
+  const [s1,s2] = pickSides(e1,e2);
+  const p1 = edgePt(e1,s1), p2 = edgePt(e2,s2);
+  return { x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2 };
+}
+
+const cColor = c => c==='PK'?'#0273B5' : c.startsWith('FK')?'#4A8FA8' : c==='nullable'?'#94a3b8' : '#888';
 
 async function fetchModel() {
   for (const url of ['./working.json', './default.json']) {
@@ -315,53 +254,372 @@ async function fetchModel() {
       if (res.ok) return await res.json();
     } catch(e) {}
   }
-  return { phases: [] };
+  return { entities: {}, relationships: [] };
+}
+
+function saveModel(model) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(model)); } catch(e) {}
+}
+
+function generateSQL(model, dialect) {
+  const isMSSQL = dialect === 'mssql';
+  const typeMap = isMSSQL ? {
+    uuid:'UNIQUEIDENTIFIER', string:'NVARCHAR(255)', int:'INT', bigint:'BIGINT',
+    bool:'BIT', json:'NVARCHAR(MAX)', enum:'NVARCHAR(50)',
+    timestamp:'DATETIME2', float:'FLOAT', text:'NVARCHAR(MAX)'
+  } : {
+    uuid:'UUID', string:'VARCHAR(255)', int:'INTEGER', bigint:'BIGINT',
+    bool:'BOOLEAN', json:'JSONB', enum:'VARCHAR(50)',
+    timestamp:'TIMESTAMPTZ', float:'DOUBLE PRECISION', text:'TEXT'
+  };
+
+  const tbl = n => n.toLowerCase();
+  const pfx = s => isMSSQL ? s.toUpperCase() : s.toLowerCase();
+  // Wrap table names to avoid reserved keyword conflicts (e.g. user, order, table)
+  const qt = n => isMSSQL ? `[${n}]` : `"${n}"`;
+
+  // field_name → referenced table (workspace_id → workspace)
+  const fkRef = {};
+  Object.keys(model.entities).forEach(n => { fkRef[tbl(n)+'_id'] = tbl(n); });
+
+  const out = [];
+  const alters = [];
+
+  out.push(`-- The Ray — Database Schema`);
+  out.push(`-- Dialect: ${isMSSQL ? 'Microsoft SQL Server' : 'PostgreSQL'}`);
+  out.push(`-- Generated: ${new Date().toISOString().split('T')[0]}`);
+  out.push('');
+
+  Object.entries(model.entities).forEach(([name, ent]) => {
+    const t = tbl(name);
+    const cols = [];
+    const tableConstraints = [];
+
+    ent.fields.forEach(f => {
+      const sqlType = typeMap[f.type] || (isMSSQL ? 'NVARCHAR(255)' : 'VARCHAR(255)');
+      const nullable = (f.constraint === '' || f.constraint === 'FK nullable' || f.constraint === 'nullable') ? ' NULL' : ' NOT NULL';
+      cols.push(`  ${f.name} ${sqlType}${nullable}`);
+    });
+
+    const pkField = ent.fields.find(f => f.constraint === 'PK');
+    if (pkField) tableConstraints.push(`  CONSTRAINT ${pfx('pk')}_${t} PRIMARY KEY (${pkField.name})`);
+
+    ent.fields.filter(f => f.constraint === 'UNIQUE').forEach(f => {
+      tableConstraints.push(`  CONSTRAINT ${pfx('uq')}_${t}_${f.name} UNIQUE (${f.name})`);
+    });
+
+    out.push(`-- ${name}`);
+    out.push(`CREATE TABLE ${qt(t)} (`);
+    out.push([...cols, ...tableConstraints].join(',\n'));
+    out.push(`);`);
+    out.push('');
+
+    ent.fields.filter(f => f.constraint === 'INDEX').forEach(f => {
+      out.push(`CREATE INDEX ${pfx('ix')}_${t}_${f.name} ON ${qt(t)} (${f.name});`);
+      out.push('');
+    });
+
+    ent.fields.filter(f => f.constraint === 'FK' || f.constraint === 'FK nullable').forEach(f => {
+      const ref = fkRef[f.name];
+      if (ref) alters.push(`ALTER TABLE ${qt(t)} ADD CONSTRAINT ${pfx('fk')}_${t}_${f.name} FOREIGN KEY (${f.name}) REFERENCES ${qt(ref)} (id);`);
+    });
+  });
+
+  if (alters.length) {
+    out.push(`-- Foreign Key Constraints`);
+    out.push('');
+    alters.forEach(a => out.push(a));
+    out.push('');
+  }
+
+  return out.join('\n');
+}
+
+function generateCSharp(model) {
+  const toPascal = s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+
+  const csType = (f) => {
+    const nullable = f.constraint === '' || f.constraint === 'FK nullable' || f.constraint === 'nullable';
+    const n = s => nullable ? `${s}?` : s;
+    switch (f.type) {
+      case 'uuid':      return n('Guid');
+      case 'int':       return n('int');
+      case 'bigint':    return n('long');
+      case 'bool':      return n('bool');
+      case 'float':     return n('double');
+      case 'timestamp': return n('DateTimeOffset');
+      case 'json':      return 'string'; // stored as JSON string; never null in model
+      case 'enum':
+      case 'string':
+      case 'text':
+      default:          return nullable ? 'string?' : 'string';
+    }
+  };
+
+  const fkRef = {};
+  Object.keys(model.entities).forEach(n => { fkRef[n.toLowerCase()+'_id'] = n; });
+
+  const out = [];
+  out.push(`// The Ray — C# Models`);
+  out.push(`// Generated: ${new Date().toISOString().split('T')[0]}`);
+  out.push(`// Namespace: adjust to match your project`);
+  out.push('');
+  out.push(`using System;`);
+  out.push(`using System.ComponentModel.DataAnnotations;`);
+  out.push(`using System.ComponentModel.DataAnnotations.Schema;`);
+  out.push('');
+  out.push(`namespace TheRay.Models`);
+  out.push(`{`);
+
+  Object.entries(model.entities).forEach(([name, ent], idx, arr) => {
+    const className = toPascal(name);
+    out.push(`    public class ${className}`);
+    out.push(`    {`);
+
+    ent.fields.forEach(f => {
+      const propName = toPascal(f.name);
+      const type = csType(f);
+
+      if (f.constraint === 'PK') {
+        out.push(`        [Key]`);
+      }
+      if (f.constraint === 'UNIQUE') {
+        out.push(`        // UNIQUE constraint — enforce at DB level`);
+      }
+      if (f.constraint === 'FK' || f.constraint === 'FK nullable') {
+        const ref = fkRef[f.name.toLowerCase()];
+        if (ref) out.push(`        [ForeignKey(nameof(${toPascal(ref)}))]`);
+      }
+      if (f.constraint !== '' && f.constraint !== 'FK nullable' && f.constraint !== 'nullable') {
+        out.push(`        [Required]`);
+      }
+      if (f.type === 'string') {
+        out.push(`        [MaxLength(255)]`);
+      }
+      if (f.type === 'enum') {
+        out.push(`        [MaxLength(50)]`);
+      }
+      if (f.type === 'json' && f.jsonDef) {
+        out.push(`        // JSON shape: ${f.jsonDef.replace(/\n/g,' ').replace(/\s+/g,' ').substring(0,80)}`);
+      }
+
+      out.push(`        public ${type} ${propName} { get; set; }`);
+      out.push('');
+    });
+
+    // Navigation properties for FK fields
+    ent.fields.filter(f => f.constraint === 'FK' || f.constraint === 'FK nullable').forEach(f => {
+      const ref = fkRef[f.name.toLowerCase()];
+      if (ref) {
+        const nullable = f.constraint === 'FK nullable';
+        out.push(`        public ${nullable ? 'virtual ' : 'virtual '}${toPascal(ref)}${nullable ? '?' : ''} ${toPascal(ref)} { get; set; }`);
+        out.push('');
+      }
+    });
+
+    out.push(`    }`);
+    if (idx < arr.length - 1) out.push('');
+  });
+
+  out.push(`}`);
+  return out.join('\n');
+}
+
+function newUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function mockTimestamp(isMSSQL) {
+  const d = new Date(Date.now() - Math.random() * 365 * 24 * 3600 * 1000);
+  const pad = n => String(n).padStart(2, '0');
+  const base = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return isMSSQL ? `'${base}'` : `'${base}+00'`;
+}
+
+function mockStringVal(fieldName, idx) {
+  const n = fieldName.toLowerCase();
+  const q = v => `'${v}'`;
+  if (n === 'email' || n.endsWith('_email')) return q(`user${idx + 1}@example.com`);
+  if (n === 'first_name') return q(['Alice','Bob','Carol','David','Eve','Frank','Grace','Henry'][idx % 8]);
+  if (n === 'last_name')  return q(['Smith','Jones','Williams','Brown','Davis','Miller','Wilson','Moore'][idx % 8]);
+  if (n === 'name' || n.endsWith('_name')) return q(`Name ${idx + 1}`);
+  if (n === 'title')      return q(`Title ${idx + 1}`);
+  if (n === 'status')     return q(['active','inactive','pending','archived'][idx % 4]);
+  if (n === 'role')       return q(['admin','user','manager','viewer'][idx % 4]);
+  if (n === 'slug' || n.endsWith('_slug')) return q(`slug-${idx + 1}`);
+  if (n === 'code' || n.endsWith('_code')) return q(`CODE-${String(idx + 1).padStart(4, '0')}`);
+  if (n === 'url'  || n.endsWith('_url'))  return q(`https://example.com/item-${idx + 1}`);
+  if (n === 'description' || n.endsWith('_desc')) return q(`Description for item ${idx + 1}`);
+  if (n === 'type' || n.endsWith('_type')) return q(['typeA','typeB','typeC'][idx % 3]);
+  return q(`Value ${idx + 1}`);
+}
+
+function mockJsonVal(jsonDef, idx) {
+  let shape;
+  try { shape = typeof jsonDef === 'string' ? JSON.parse(jsonDef) : jsonDef; } catch { return "'{}'"; }
+  if (!shape || typeof shape !== 'object' || Array.isArray(shape)) return "'{}'";
+
+  function mockLeaf(key, exampleVal) {
+    const k = key.toLowerCase();
+    if (typeof exampleVal === 'boolean') return Math.random() > 0.5;
+    if (typeof exampleVal === 'number') return Number((Math.random() * 100).toFixed(2));
+    if (Array.isArray(exampleVal)) return exampleVal.length ? [exampleVal[idx % exampleVal.length]] : [];
+    if (typeof exampleVal === 'object' && exampleVal !== null) {
+      const nested = {};
+      Object.entries(exampleVal).forEach(([nk, nv]) => { nested[nk] = mockLeaf(nk, nv); });
+      return nested;
+    }
+    // string heuristics
+    if (k.includes('email')) return `user${idx+1}@example.com`;
+    if (k.includes('url') || k.includes('href')) return `https://example.com/item-${idx+1}`;
+    if (k.includes('name')) return `Name ${idx+1}`;
+    if (k.includes('id'))   return newUUID();
+    if (k.includes('status')) return ['active','inactive','pending'][idx%3];
+    if (k.includes('type'))   return ['typeA','typeB','typeC'][idx%3];
+    if (k.includes('count') || k.includes('total') || k.includes('size')) return Math.floor(Math.random()*100);
+    if (k.includes('date') || k.includes('at')) return new Date(Date.now() - Math.random()*1e10).toISOString();
+    if (k.includes('enabled') || k.includes('active') || k.includes('visible')) return Math.random()>0.5;
+    return `${key} ${idx+1}`;
+  }
+
+  const result = {};
+  Object.entries(shape).forEach(([k, v]) => { result[k] = mockLeaf(k, v); });
+  // escape single quotes for SQL
+  return `'${JSON.stringify(result).replace(/'/g, "''")}'`;
+}
+
+function generateMockData(model, dialect) {
+  const isMSSQL = dialect === 'mssql';
+  const tbl = n => n.toLowerCase();
+  const qt = n => isMSSQL ? `[${n}]` : `"${n}"`;
+
+  // Pre-generate PKs for every table so FK columns can reference them
+  const tablePKs = {};
+  const tableRowCounts = {};
+  Object.keys(model.entities).forEach(name => {
+    const count = 20 + Math.floor(Math.random() * 31); // 20–50
+    tableRowCounts[tbl(name)] = count;
+    tablePKs[tbl(name)] = Array.from({length: count}, () => newUUID());
+  });
+
+  // field_name → referenced table (same convention as generateSQL)
+  const fkRef = {};
+  Object.keys(model.entities).forEach(n => { fkRef[tbl(n)+'_id'] = tbl(n); });
+
+  const out = [];
+  out.push(`-- Mock Data — for development / testing only`);
+  out.push(`-- Row counts: 20–50 per table (randomised at export time)`);
+  out.push('');
+
+  // Disable FK constraints so insert order doesn't matter and circular refs are handled
+  if (isMSSQL) {
+    out.push(`EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL';`);
+  } else {
+    out.push(`SET session_replication_role = replica;`);
+  }
+  out.push('');
+
+  Object.entries(model.entities).forEach(([name, ent]) => {
+    const t = tbl(name);
+    const count = tableRowCounts[t];
+    const fieldNames = ent.fields.map(f => f.name).join(', ');
+
+    out.push(`-- ${name} (${count} rows)`);
+
+    for (let i = 0; i < count; i++) {
+      const values = ent.fields.map(f => {
+        if (f.constraint === 'PK') {
+          if (f.type === 'int' || f.type === 'bigint') return String(i + 1);
+          return `'${tablePKs[t][i]}'`;
+        }
+        if (f.constraint === 'FK' || f.constraint === 'FK nullable') {
+          if (f.constraint === 'FK nullable' && Math.random() < 0.15) return 'NULL';
+          const ref = fkRef[f.name];
+          if (ref && tablePKs[ref] && tablePKs[ref].length > 0)
+            return `'${tablePKs[ref][Math.floor(Math.random() * tablePKs[ref].length)]}'`;
+          // Non-conventional FK name (e.g. uploaded_by, granted_by) — generate a UUID
+          // so NOT NULL constraints are satisfied even without a resolvable reference
+          return `'${newUUID()}'`;
+        }
+        switch (f.type) {
+          case 'uuid':      return `'${newUUID()}'`;
+          case 'int':       return String(Math.floor(Math.random() * 1000));
+          case 'bigint':    return String(Math.floor(Math.random() * 1000000));
+          case 'bool':      return isMSSQL ? (Math.random() > 0.5 ? '1' : '0') : (Math.random() > 0.5 ? 'TRUE' : 'FALSE');
+          case 'float':     return (Math.random() * 100).toFixed(2);
+          case 'json':      return mockJsonVal(f.jsonDef, i);
+          case 'timestamp': return mockTimestamp(isMSSQL);
+          case 'text':      return `'Sample text for ${f.name} — row ${i + 1}'`;
+          case 'enum':
+          case 'string':
+          default:          return mockStringVal(f.name, i);
+        }
+      });
+      out.push(`INSERT INTO ${qt(t)} (${fieldNames}) VALUES (${values.join(', ')});`);
+    }
+    out.push('');
+  });
+
+  // Re-enable FK constraints
+  if (isMSSQL) {
+    out.push(`EXEC sp_msforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL';`);
+  } else {
+    out.push(`SET session_replication_role = DEFAULT;`);
+  }
+  out.push('');
+
+  return out.join('\n');
 }
 
 async function saveToGitHub(model, pat) {
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(model, null, 2))));
+  // Get current SHA of working.json (needed for updates)
   const headers = { Authorization: `token ${pat}`, 'Content-Type': 'application/json' };
   const getRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}`, { headers });
   let sha;
-  if (getRes.ok) { const d = await getRes.json(); sha = d.sha; }
-  const body = { message: 'chore: update working.json from Workflow Editor', content, branch: GH_BRANCH, ...(sha ? { sha } : {}) };
+  if (getRes.ok) { const data = await getRes.json(); sha = data.sha; }
+  const body = { message: 'chore: update working.json from ERD Editor', content, branch: GH_BRANCH, ...(sha ? { sha } : {}) };
   const putRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
     method: 'PUT', headers, body: JSON.stringify(body)
   });
-  if (!putRes.ok) { const err = await putRes.json(); throw new Error(err.message || 'GitHub API error'); }
-}
-
-// ── Model mutation helpers ──────────────────────────────────────
-function updatePhases(model, phaseIdx, flowIdx, laneIdx, fn) {
-  return {
-    ...model,
-    phases: model.phases.map((ph, pi) => pi !== phaseIdx ? ph : {
-      ...ph,
-      flows: ph.flows.map((fl, fi) => fi !== flowIdx ? fl : {
-        ...fl,
-        lanes: fl.lanes.map((ln, li) => li !== laneIdx ? ln : fn(ln))
-      })
-    })
-  };
+  if (!putRes.ok) {
+    const err = await putRes.json();
+    throw new Error(err.message || 'GitHub API error');
+  }
 }
 
 function App() {
-  const e = React.createElement;
-
-  const [model,       setModel]       = useState(null);
-  const [activePhase, setActivePhase] = useState(0);
-  const [editMode,    setEditMode]    = useState(false);
-  const [detailStep,  setDetailStep]  = useState(null);
-  const [editCtx,     setEditCtx]     = useState(null); // {phaseIdx,flowIdx,laneIdx,stepIdx}
-  const [saved,       setSaved]       = useState(true);
-  const [pat,         setPat]         = useState(() => localStorage.getItem(PAT_KEY) || '');
-  const [showPat,     setShowPat]     = useState(false);
-  const [patInput,    setPatInput]    = useState('');
-  const [ghStatus,    setGhStatus]    = useState(null);
-  const [ghMsg,       setGhMsg]       = useState('');
-  const [showGhMenu,  setShowGhMenu]  = useState(false);
-  const [newTagVal,   setNewTagVal]   = useState('');
-  const [newItemVal,  setNewItemVal]  = useState('');
+  const [model,    setModel]    = useState(null);
+  const [selEnt,   setSelEnt]   = useState(null);
+  const [selRel,   setSelRel]   = useState(null);
+  const [mode,     setMode]     = useState('select');
+  const [relSrc,   setRelSrc]   = useState(null);
+  const [drag,     setDrag]     = useState(null);
+  const [newF,     setNewF]     = useState({name:'',type:'string',constraint:''});
+  const [editName, setEditName] = useState(false);
+  const [renameV,  setRenameV]  = useState('');
+  const [showNew,  setShowNew]  = useState(false);
+  const [newEntN,  setNewEntN]  = useState('');
+  const [pendRel,  setPendRel]  = useState(null);
+  const [relLbl,   setRelLbl]   = useState('');
+  const [saved,      setSaved]      = useState(true);
+  const [pat,        setPat]        = useState(() => localStorage.getItem(PAT_KEY) || '');
+  const [showPat,    setShowPat]    = useState(false);
+  const [patInput,   setPatInput]   = useState('');
+  const [ghStatus,   setGhStatus]   = useState(null); // null | 'saving' | 'ok' | 'error'
+  const [ghMsg,      setGhMsg]      = useState('');
+  const [showHelp,       setShowHelp]       = useState(false);
+  const [includeMockData,setIncludeMockData]= useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showImportMenu,setShowImportMenu]= useState(false);
+  const [showGhMenu,    setShowGhMenu]    = useState(false);
+  const [tooltip,    setTooltip]    = useState(null); // {x,y,fieldName,def}
+  const tooltipHideTimer = useRef(null);
+  const svgRef  = useRef(null);
+  const fileRef = useRef(null);
 
   // Load on mount: localStorage → working.json → default.json
   useEffect(() => {
@@ -374,130 +632,141 @@ function App() {
     })();
   }, []);
 
-  // Auto-save to localStorage every 600ms
+  // Auto-save to localStorage
   useEffect(() => {
     if (!model) return;
     setSaved(false);
-    const t = setTimeout(() => {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(model)); } catch(ex) {}
-      setSaved(true);
-    }, 600);
+    const t = setTimeout(() => { saveModel(model); setSaved(true); }, 600);
     return () => clearTimeout(t);
   }, [model]);
 
-  // Derive editing step from model + editCtx
-  const editingStep = editCtx && model
-    ? model.phases[editCtx.phaseIdx]?.flows[editCtx.flowIdx]?.lanes[editCtx.laneIdx]?.steps[editCtx.stepIdx]
-    : null;
-
-  // Update a field on the currently-editing step
-  const updateEditField = useCallback((field, value) => {
-    if (!editCtx) return;
-    const { phaseIdx, flowIdx, laneIdx, stepIdx } = editCtx;
-    setModel(m => updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({
-      ...ln,
-      steps: ln.steps.map((s, si) => si !== stepIdx ? s : { ...s, [field]: value })
-    })));
-  }, [editCtx]);
-
-  // Update a list item within step
-  const updateListItem = useCallback((field, idx, value) => {
-    if (!editCtx || !editingStep) return;
-    const arr = [...(editingStep[field] || [])];
-    arr[idx] = value;
-    updateEditField(field, arr);
-  }, [editCtx, editingStep, updateEditField]);
-
-  const removeListItem = useCallback((field, idx) => {
-    if (!editCtx || !editingStep) return;
-    updateEditField(field, (editingStep[field] || []).filter((_, i) => i !== idx));
-  }, [editCtx, editingStep, updateEditField]);
-
-  const addListItem = useCallback((field, value) => {
-    if (!editCtx || !editingStep || !value.trim()) return;
-    updateEditField(field, [...(editingStep[field] || []), value.trim()]);
-  }, [editCtx, editingStep, updateEditField]);
-
-  const moveListItem = useCallback((field, idx, dir) => {
-    if (!editCtx || !editingStep) return;
-    const arr = [...(editingStep[field] || [])];
-    const ni = idx + dir;
-    if (ni < 0 || ni >= arr.length) return;
-    [arr[idx], arr[ni]] = [arr[ni], arr[idx]];
-    updateEditField(field, arr);
-  }, [editCtx, editingStep, updateEditField]);
-
-  const moveStep = useCallback((dir) => {
-    if (!editCtx) return;
-    const { phaseIdx, flowIdx, laneIdx, stepIdx } = editCtx;
-    const newIdx = stepIdx + dir;
-    setModel(m => {
-      const lane = m.phases[phaseIdx].flows[flowIdx].lanes[laneIdx];
-      if (newIdx < 0 || newIdx >= lane.steps.length) return m;
-      const steps = [...lane.steps];
-      [steps[stepIdx], steps[newIdx]] = [steps[newIdx], steps[stepIdx]];
-      return updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({ ...ln, steps }));
-    });
-    setEditCtx(c => ({ ...c, stepIdx: c.stepIdx + dir }));
-  }, [editCtx]);
-
-  const deleteStep = useCallback(() => {
-    if (!editCtx) return;
-    if (!window.confirm('Delete this step?')) return;
-    const { phaseIdx, flowIdx, laneIdx, stepIdx } = editCtx;
-    setModel(m => updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({
-      ...ln, steps: ln.steps.filter((_, si) => si !== stepIdx)
-    })));
-    setEditCtx(null);
-  }, [editCtx]);
-
-  const addStep = useCallback((phaseIdx, flowIdx, laneIdx) => {
-    setModel(m => {
-      const lane = m.phases[phaseIdx].flows[flowIdx].lanes[laneIdx];
-      const newStep = {
-        key: 'step_' + Date.now(),
-        label: 'New Step',
-        sublabel: '',
-        badge: 'Badge',
-        badgeColor: '#64748b',
-        desc: '',
-        items: [],
-        tags: [],
-        connectors: []
-      };
-      const newIdx = lane.steps.length;
-      // schedule editCtx update after model settles
-      setTimeout(() => {
-        setEditCtx({ phaseIdx, flowIdx, laneIdx, stepIdx: newIdx });
-        setNewTagVal(''); setNewItemVal('');
-      }, 0);
-      return updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({
-        ...ln, steps: [...ln.steps, newStep]
-      }));
-    });
+  const svgPt = useCallback(e => {
+    const svg = svgRef.current; if (!svg) return {x:0,y:0};
+    const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+    const t = p.matrixTransform(svg.getScreenCTM().inverse());
+    return {x:t.x, y:t.y};
   }, []);
 
-  const handleStepClick = useCallback((phaseIdx, flowIdx, laneIdx, stepIdx, step) => {
-    if (editMode) {
-      setEditCtx({ phaseIdx, flowIdx, laneIdx, stepIdx });
-      setNewTagVal('');
-      setNewItemVal('');
-    } else {
-      setDetailStep(step);
+  const onEntDown = useCallback((e, name) => {
+    if (mode === 'addRel') {
+      if (!relSrc) { setRelSrc(name); return; }
+      if (relSrc !== name) { setPendRel({from:relSrc,to:name}); setRelLbl(''); setRelSrc(null); setMode('select'); return; }
     }
-  }, [editMode]);
+    e.stopPropagation();
+    const {x,y} = svgPt(e);
+    const ent = model.entities[name];
+    setDrag({name, mx:x, my:y, ox:ent.x, oy:ent.y});
+    setSelEnt(name); setSelRel(null); setEditName(false);
+  }, [mode, relSrc, model, svgPt]);
 
-  const pushToGitHub = useCallback(async () => {
-    if (!pat) { setShowPat(true); return; }
-    setGhStatus('saving'); setGhMsg('');
+  const onMove = useCallback(e => {
+    if (!drag) return;
+    const {x,y} = svgPt(e);
+    setModel(p => ({...p, entities: {...p.entities, [drag.name]: {
+      ...p.entities[drag.name],
+      x: Math.max(0, drag.ox + (x - drag.mx)),
+      y: Math.max(0, drag.oy + (y - drag.my))
+    }}}));
+  }, [drag, svgPt]);
+
+  const onUp = useCallback(() => setDrag(null), []);
+
+  const updField = useCallback((ent,i,k,v) =>
+    setModel(p => ({...p, entities: {...p.entities, [ent]: {
+      ...p.entities[ent],
+      fields: p.entities[ent].fields.map((f,j) => j===i ? {...f,[k]:v} : f)
+    }}})), []);
+
+  const delField = useCallback((ent,i) =>
+    setModel(p => ({...p, entities: {...p.entities, [ent]: {
+      ...p.entities[ent],
+      fields: p.entities[ent].fields.filter((_,j) => j!==i)
+    }}})), []);
+
+  const addField = useCallback(ent => {
+    if (!newF.name.trim()) return;
+    setModel(p => ({...p, entities: {...p.entities, [ent]: {
+      ...p.entities[ent],
+      fields: [...p.entities[ent].fields, {...newF, name:newF.name.trim()}]
+    }}}));
+    setNewF({name:'',type:'string',constraint:''});
+  }, [newF]);
+
+  const doRename = useCallback(() => {
+    const n = renameV.trim().toUpperCase().replace(/\s+/g,'_');
+    if (!n || n===selEnt || model.entities[n]) return;
+    setModel(p => {
+      const {[selEnt]:ent, ...rest} = p.entities;
+      return { entities: {...rest,[n]:ent},
+               relationships: p.relationships.map(r => ({...r,from:r.from===selEnt?n:r.from,to:r.to===selEnt?n:r.to})) };
+    });
+    setSelEnt(n); setEditName(false);
+  }, [renameV, selEnt, model]);
+
+  const delEnt = useCallback(name => {
+    setModel(p => { const {[name]:_,...rest}=p.entities; return {entities:rest,relationships:p.relationships.filter(r=>r.from!==name&&r.to!==name)}; });
+    setSelEnt(null);
+  }, []);
+
+  const addEnt = useCallback(() => {
+    const n = newEntN.trim().toUpperCase().replace(/\s+/g,'_');
+    if (!n || model.entities[n]) return;
+    setModel(p => ({...p, entities: {...p.entities, [n]: {
+      x: 200+Math.random()*200, y: 200+Math.random()*200,
+      fields: [{name:'id',type:'uuid',constraint:'PK'}]
+    }}}));
+    setNewEntN(''); setShowNew(false); setSelEnt(n);
+  }, [newEntN, model]);
+
+  const confirmRel = useCallback(() => {
+    if (!pendRel) return;
+    setModel(p => ({...p, relationships: [...p.relationships, {id:'r'+Date.now(),from:pendRel.from,to:pendRel.to,label:relLbl||'relates to'}]}));
+    setPendRel(null);
+  }, [pendRel, relLbl]);
+
+  const delRel = useCallback(id => {
+    setModel(p => ({...p, relationships: p.relationships.filter(r=>r.id!==id)}));
+    setSelRel(null);
+  }, []);
+
+  const updRelLbl = useCallback((id,v) =>
+    setModel(p => ({...p, relationships: p.relationships.map(r=>r.id===id?{...r,label:v}:r)})), []);
+
+  const exportJSON = useCallback(() => {
+    const b = new Blob([JSON.stringify(model,null,2)],{type:'application/json'});
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a'); a.href=u; a.download='working.json'; a.click();
+    URL.revokeObjectURL(u);
+  }, [model]);
+
+  const importJSON = useCallback(e => {
+    const f = e.target.files?.[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ev => { try { const p=JSON.parse(ev.target.result); if(p.entities&&p.relationships){setModel(p);setSelEnt(null);setSelRel(null);} } catch{alert('Invalid JSON file');} };
+    r.readAsText(f); e.target.value='';
+  }, []);
+
+  const resetToDefault = useCallback(async () => {
+    if (!window.confirm('Reset to default model? Your local changes will be lost.')) return;
     try {
-      await saveToGitHub(model, pat);
-      setGhStatus('ok');
-      setTimeout(() => setGhStatus(null), 3000);
-    } catch(err) {
-      setGhStatus('error'); setGhMsg(err.message);
-    }
-  }, [model, pat]);
+      const res = await fetch('./default.json');
+      if (res.ok) {
+        localStorage.removeItem(STORAGE_KEY);
+        setModel(await res.json());
+        setSelEnt(null); setSelRel(null);
+        return;
+      }
+    } catch(e) {}
+    alert('Could not load default.json');
+  }, []);
+
+  const loadFromRepo = useCallback(async () => {
+    if (!window.confirm('Load latest from repo (working.json)? Your local session changes will be lost.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    setModel(null);
+    setSelEnt(null); setSelRel(null);
+    setModel(await fetchModel());
+  }, []);
 
   const savePat = useCallback(() => {
     const t = patInput.trim();
@@ -505,326 +774,605 @@ function App() {
     setPat(t); setPatInput(''); setShowPat(false);
   }, [patInput]);
 
-  const resetToDefault = useCallback(async () => {
-    if (!window.confirm('Reset to default? Local changes will be lost.')) return;
-    try {
-      const res = await fetch('./default.json');
-      if (res.ok) { localStorage.removeItem(STORAGE_KEY); setModel(await res.json()); setEditCtx(null); return; }
-    } catch(ex) {}
-    alert('Could not load default.json');
-  }, []);
-
-  const loadFromRepo = useCallback(async () => {
-    if (!window.confirm('Load latest from repo? Local changes will be lost.')) return;
-    localStorage.removeItem(STORAGE_KEY);
-    setModel(null); setEditCtx(null);
-    setModel(await fetchModel());
-  }, []);
-
-  const exportJSON = useCallback(() => {
-    const b = new Blob([JSON.stringify(model, null, 2)], { type: 'application/json' });
+  const exportSQL = useCallback(dialect => {
+    let sql = generateSQL(model, dialect);
+    if (includeMockData) sql += '\n' + generateMockData(model, dialect);
+    const b = new Blob([sql], {type:'text/plain'});
     const u = URL.createObjectURL(b);
-    const a = document.createElement('a'); a.href = u; a.download = 'working.json'; a.click();
+    const a = document.createElement('a');
+    a.href = u; a.download = `theray_schema_${dialect}.sql`; a.click();
     URL.revokeObjectURL(u);
+    setShowExportMenu(false);
+  }, [model, includeMockData]);
+
+  const exportJsonDefs = useCallback(() => {
+    const defs = {};
+    Object.entries(model.entities).forEach(([name, ent]) => {
+      ent.fields.filter(f => f.type === 'json' && f.jsonDef).forEach(f => {
+        try { defs[`${name}.${f.name}`] = JSON.parse(f.jsonDef); }
+        catch { defs[`${name}.${f.name}`] = f.jsonDef; }
+      });
+    });
+    const b = new Blob([JSON.stringify(defs, null, 2)], {type:'application/json'});
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a'); a.href=u; a.download='theray_json_definitions.json'; a.click();
+    URL.revokeObjectURL(u);
+    setShowExportMenu(false);
   }, [model]);
 
-  if (!model) return e('div', { className: 'loading' }, 'Loading workflow…');
+  const exportCSharp = useCallback(() => {
+    const cs = generateCSharp(model);
+    const b = new Blob([cs], {type:'text/plain'});
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a'); a.href=u; a.download='TheRayModels.cs'; a.click();
+    URL.revokeObjectURL(u);
+    setShowExportMenu(false);
+  }, [model]);
 
-  const phase = model.phases[activePhase];
-  const laneCount = phase ? phase.flows.reduce((s, f) => s + f.lanes.length, 0) : 0;
+  const exportPDF = useCallback(() => {
+    const PAD = 40;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    Object.values(model.entities).forEach(ent => {
+      minX = Math.min(minX, ent.x);
+      minY = Math.min(minY, ent.y);
+      maxX = Math.max(maxX, ent.x + BOX_W);
+      maxY = Math.max(maxY, ent.y + bh(ent.fields));
+    });
+    if (!isFinite(minX)) { alert('No entities to export.'); return; }
+    const w = maxX - minX + PAD * 2;
+    const h = maxY - minY + PAD * 2;
+    const vbX = minX - PAD, vbY = minY - PAD;
 
-  // ── Render helpers ──
-  const renderStep = (step, phaseIdx, flowIdx, laneIdx, stepIdx, laneId) => {
-    const isSelected = editCtx &&
-      editCtx.phaseIdx === phaseIdx && editCtx.flowIdx === flowIdx &&
-      editCtx.laneIdx === laneIdx && editCtx.stepIdx === stepIdx;
-    return e('div', {
-      key: step.key || stepIdx,
-      className: `step${isSelected ? ' step-selected' : ''}${editMode ? ' edit-mode-active' : ''}`,
-      title: editMode ? 'Click to edit' : step.sublabel || '',
-      onClick: () => handleStepClick(phaseIdx, flowIdx, laneIdx, stepIdx, step)
-    },
-      e('div', { className: 'stitle' }, step.label),
-      step.sublabel && e('div', { className: 'ssub' }, step.sublabel)
-    );
-  };
+    const clone = svgRef.current.cloneNode(true);
+    clone.setAttribute('viewBox', `${vbX} ${vbY} ${w} ${h}`);
+    clone.setAttribute('width', w);
+    clone.setAttribute('height', h);
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('x', vbX); bg.setAttribute('y', vbY);
+    bg.setAttribute('width', w); bg.setAttribute('height', h);
+    bg.setAttribute('fill', 'white');
+    clone.insertBefore(bg, clone.firstChild);
 
-  const renderLane = (lane, phaseIdx, flowIdx, laneIdx) => {
-    const lc = LANE_COLORS[lane.id] || { color: '#64748b', bg: '#f8fafc' };
-    return e('div', { key: lane.id, className: `swimlane-row lane-${lane.id}` },
-      e('div', {
-        className: 'lane-label',
-        style: { background: lc.bg, color: lc.color }
-      },
-        e('div', { className: 'lname' }, lane.label),
-        lane.sublabel && e('div', { className: 'lsub' }, lane.sublabel)
-      ),
-      e('div', { className: 'lane-body' },
-        ...lane.steps.flatMap((step, stepIdx) => {
-          const nodes = [];
-          if (stepIdx > 0) nodes.push(e('div', { key: `arr-${stepIdx}`, className: 'arrow' }, '→'));
-          nodes.push(renderStep(step, phaseIdx, flowIdx, laneIdx, stepIdx, lane.id));
-          return nodes;
-        }),
-        editMode && e('div', { key: 'add-wrap', style: { display: 'flex', alignItems: 'center', marginLeft: lane.steps.length > 0 ? 0 : 0 } },
-          lane.steps.length > 0 && e('div', { className: 'arrow', style: { color: '#cbd5e1' } }, '→'),
-          e('button', {
-            className: 'add-step-btn',
-            onClick: () => addStep(phaseIdx, flowIdx, laneIdx)
-          }, '+ Step')
-        )
+    // CSS variables don't resolve in serialized SVG blobs — replace with real font stack
+    const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+    clone.querySelectorAll('[font-family]').forEach(el => {
+      if (el.getAttribute('font-family') === 'var(--font)') el.setAttribute('font-family', FONT);
+    });
+
+    const svgStr = new XMLSerializer().serializeToString(clone);
+    const url = URL.createObjectURL(new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'}));
+    const scale = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = w * scale; canvas.height = h * scale;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({orientation: w > h ? 'landscape' : 'portrait', unit:'pt', format:[w, h]});
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, w, h);
+
+      // Collect JSON field definitions
+      const defs = [];
+      Object.entries(model.entities).forEach(([name, ent]) => {
+        ent.fields.filter(f => f.type === 'json' && f.jsonDef).forEach(f => {
+          let parsed; try { parsed = JSON.parse(f.jsonDef); } catch { parsed = f.jsonDef; }
+          defs.push({ key: `${name}.${f.name}`, json: JSON.stringify(parsed, null, 2) });
+        });
+      });
+
+      if (defs.length > 0) {
+        const PW = 612, PH = 792, MARGIN = 40, LINE_H = 13;
+        const newPage = () => { doc.addPage([PW, PH], 'portrait'); return MARGIN; };
+        let y = newPage();
+
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+        doc.text('JSON Field Definitions', MARGIN, y); y += LINE_H * 2.2;
+
+        defs.forEach(({ key, json }) => {
+          if (y + LINE_H * 3 > PH - MARGIN) y = newPage();
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+          doc.setTextColor(2, 115, 181);
+          doc.text(key, MARGIN, y); y += LINE_H * 1.4;
+          doc.setFont('courier', 'normal'); doc.setFontSize(8);
+          doc.setTextColor(30, 41, 59);
+          doc.splitTextToSize(json, PW - MARGIN * 2).forEach(line => {
+            if (y + LINE_H > PH - MARGIN) y = newPage();
+            doc.text(line, MARGIN, y); y += LINE_H;
+          });
+          y += LINE_H * 0.8;
+        });
+      }
+
+      doc.save('erd-diagram.pdf');
+      setShowExportMenu(false);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); alert('Failed to render diagram.'); };
+    img.src = url;
+  }, [model]);
+
+  const closeAllMenus = useCallback(() => {
+    setShowExportMenu(false); setShowImportMenu(false); setShowGhMenu(false);
+  }, []);
+
+  const pushToGitHub = useCallback(async () => {
+    if (!pat) { setShowPat(true); return; }
+    setGhStatus('saving'); setGhMsg('');
+    try {
+      await saveToGitHub(model, pat);
+      setGhStatus('ok'); setGhMsg('Saved to GitHub');
+      setTimeout(() => setGhStatus(null), 3000);
+    } catch(err) {
+      setGhStatus('error'); setGhMsg(err.message);
+    }
+  }, [model, pat]);
+
+  if (!model) {
+    return React.createElement('div', {className:'loading'}, 'Loading ERD…');
+  }
+
+  const selEntData = selEnt ? model.entities[selEnt] : null;
+  const selRelData = selRel ? model.relationships.find(r=>r.id===selRel) : null;
+  const CW = 1600, CH = 1600;
+
+  const e = React.createElement;
+
+  const ddMenu = (items) => e('div',{style:{
+    position:'absolute',top:'calc(100% + 4px)',right:0,
+    background:'#015a8c',border:'1px solid rgba(255,255,255,0.2)',
+    borderRadius:4,overflow:'hidden',zIndex:100,minWidth:180,boxShadow:'0 4px 12px rgba(0,0,0,0.3)'
+  }}, ...items.map((item,i) => item === '---'
+    ? e('div',{key:i,style:{height:1,background:'rgba(255,255,255,0.15)',margin:'2px 0'}})
+    : item.checkbox !== undefined
+    ? e('label',{key:i,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',cursor:'pointer',color:'white',fontSize:11,fontFamily:'var(--font)',userSelect:'none'}},
+        e('input',{type:'checkbox',checked:item.checked,onChange:item.onChange,style:{cursor:'pointer',accentColor:'#FFC107'}}),
+        item.label
       )
-    );
-  };
+    : e('button',{key:i,className:'tb-btn',style:{display:'block',width:'100%',borderRadius:0,border:'none',textAlign:'left',padding:'8px 14px'},onClick:item.action},item.label)
+  ));
 
-  const renderFlow = (flow, phaseIdx, flowIdx, isMultiFlow, isLast) => {
-    return e('div', { key: flow.id },
-      isMultiFlow && e('div', { className: 'flow-header' },
-        e('span', {
-          className: 'flow-header-label',
-          style: { color: flow.id === 'A' ? '#0273B5' : flow.id === 'B' ? '#16a34a' : '#64748b' }
-        }, `${flow.id} — ${flow.label || ''}`),
-        flow.description && e('span', null, flow.description)
-      ),
-      e('div', {
-        className: 'swimlane-wrap',
-        style: { marginBottom: isLast ? 0 : 16 }
-      },
-        flow.lanes.map((lane, laneIdx) => renderLane(lane, phaseIdx, flowIdx, laneIdx))
-      )
-    );
-  };
-
-  // ── Edit panel ──
-  const renderEditPanel = () => {
-    if (!editCtx || !editingStep) return null;
-    const step = editingStep;
-    const laneData = model.phases[editCtx.phaseIdx]?.flows[editCtx.flowIdx]?.lanes[editCtx.laneIdx];
-    const stepCount = laneData ? laneData.steps.length : 0;
-
-    return e('div', { className: 'side-panel' },
-      e('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-        e('div', { className: 'panel-label' }, 'Edit Step'),
-        e('button', { className: 'icon-btn', title: 'Close', onClick: () => setEditCtx(null) }, '→')
-      ),
-
-      e('div', { className: 'panel-label' }, 'Label'),
-      e('input', { className: 'inp', value: step.label || '', onChange: ev => updateEditField('label', ev.target.value) }),
-
-      e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Sublabel'),
-      e('input', { className: 'inp', value: step.sublabel || '', onChange: ev => updateEditField('sublabel', ev.target.value) }),
-
-      e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Badge'),
-      e('input', { className: 'inp', value: step.badge || '', onChange: ev => updateEditField('badge', ev.target.value) }),
-
-      e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Description'),
-      e('textarea', {
-        className: 'inp', value: step.desc || '', rows: 4,
-        style: { resize: 'vertical', lineHeight: 1.5 },
-        onChange: ev => updateEditField('desc', ev.target.value)
-      }),
-
-      e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Bullet Items'),
-      ...(step.items || []).map((item, i) =>
-        e('div', { key: i, className: 'field-row' },
-          e('input', {
-            className: 'inp', value: item,
-            onChange: ev => updateListItem('items', i, ev.target.value)
-          }),
-          e('button', { className: 'icon-btn blue', title: 'Up', disabled: i === 0, onClick: () => moveListItem('items', i, -1) }, '▲'),
-          e('button', { className: 'icon-btn blue', title: 'Down', disabled: i === (step.items || []).length - 1, onClick: () => moveListItem('items', i, 1) }, '▼'),
-          e('button', { className: 'icon-btn', title: 'Delete', onClick: () => removeListItem('items', i) }, '🗑')
-        )
-      ),
-      e('div', { className: 'field-row', style: { marginTop: 4 } },
-        e('input', {
-          className: 'inp', placeholder: 'Add item…', value: newItemVal,
-          onChange: ev => setNewItemVal(ev.target.value),
-          onKeyDown: ev => { if (ev.key === 'Enter') { addListItem('items', newItemVal); setNewItemVal(''); } }
-        }),
-        e('button', {
-          className: 'icon-btn blue', title: 'Add',
-          onClick: () => { addListItem('items', newItemVal); setNewItemVal(''); }
-        }, '+')
-      ),
-
-      e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Tags'),
-      e('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 4 } },
-        ...(step.tags || []).map((tag, i) =>
-          e('span', { key: i, className: 'tag-chip' },
-            tag,
-            e('button', { className: 'tag-x', onClick: () => removeListItem('tags', i) }, '✕')
-          )
-        )
-      ),
-      e('div', { className: 'field-row' },
-        e('input', {
-          className: 'inp', placeholder: 'Add tag…', value: newTagVal,
-          onChange: ev => setNewTagVal(ev.target.value),
-          onKeyDown: ev => { if (ev.key === 'Enter') { addListItem('tags', newTagVal); setNewTagVal(''); } }
-        }),
-        e('button', {
-          className: 'icon-btn blue', title: 'Add tag',
-          onClick: () => { addListItem('tags', newTagVal); setNewTagVal(''); }
-        }, '+')
-      ),
-
-      e('div', { style: { borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8 } }),
-      e('div', { className: 'panel-label' }, 'Position in Lane'),
-      e('div', { style: { display: 'flex', gap: 4 } },
-        e('button', {
-          className: 'action-btn', style: { background: '#7c3aed' },
-          disabled: editCtx.stepIdx === 0,
-          onClick: () => moveStep(-1)
-        }, '▲ Up'),
-        e('button', {
-          className: 'action-btn', style: { background: '#7c3aed' },
-          disabled: editCtx.stepIdx >= stepCount - 1,
-          onClick: () => moveStep(1)
-        }, '▼ Down')
-      ),
-      e('button', {
-        className: 'action-btn', style: { background: '#cc3300', marginTop: 6 },
-        onClick: deleteStep
-      }, '🗑 Delete Step')
-    );
-  };
-
-  // ── Main render ──
-  return e('div', { id: 'app-root', onClick: () => setShowGhMenu(false) },
-
+  return e('div',{className:'erd-root', onClick: closeAllMenus},
     // Toolbar
-    e('div', { className: 'toolbar', onClick: ev => ev.stopPropagation() },
-      e('span', { className: 'toolbar-title' }, 'The Ray'),
-      e('span', { className: 'toolbar-subtitle' }, 'System Workflow'),
-      e('div', { className: 'toolbar-divider' }),
-      e('button', {
-        className: `tb-btn${editMode ? ' active' : ''}`,
-        onClick: () => { setEditMode(m => !m); setEditCtx(null); }
-      }, editMode ? '✎ Edit Mode ON' : '✎ Edit Mode'),
-      e('div', { className: 'spacer' }),
+    e('div',{className:'toolbar', onClick:ev=>ev.stopPropagation()},
+      e('span',{className:'toolbar-title'},'The Ray — ERD Editor'),
+      e('div',{className:'toolbar-divider'}),
+      e('button',{className:'tb-btn',onClick:()=>setShowNew(true)},'+ Entity'),
+      e('button',{
+        className:`tb-btn${mode==='addRel'?' active':''}`,
+        onClick:()=>{setMode(m=>m==='addRel'?'select':'addRel');setRelSrc(null);}
+      }, mode==='addRel'?(relSrc?`${relSrc} → click target`:'Click source entity'):'+ Relationship'),
+      e('div',{className:'spacer'}),
+
+      // Export dropdown
+      e('div',{style:{position:'relative'}},
+        e('button',{className:'tb-btn',onClick:ev=>{ev.stopPropagation();setShowExportMenu(m=>!m);setShowImportMenu(false);setShowGhMenu(false);}},'Export ▾'),
+        showExportMenu && ddMenu([
+          {label:'↓ Model JSON',       action:()=>{exportJSON();setShowExportMenu(false);}},
+          {label:'↓ JSON Definitions', action:exportJsonDefs},
+          {label:'↓ C# Models',        action:exportCSharp},
+          {label:'↓ PDF Diagram',      action:exportPDF},
+          '---',
+          {label:'Include mock data', checkbox:true, checked:includeMockData, onChange:()=>setIncludeMockData(v=>!v)},
+          '---',
+          {label:'↓ SQL — MS SQL Server', action:()=>exportSQL('mssql')},
+          {label:'↓ SQL — PostgreSQL',    action:()=>exportSQL('postgres')},
+        ])
+      ),
+
+      // Import dropdown
+      e('div',{style:{position:'relative'}},
+        e('button',{className:'tb-btn',onClick:ev=>{ev.stopPropagation();setShowImportMenu(m=>!m);setShowExportMenu(false);setShowGhMenu(false);}},'Import ▾'),
+        showImportMenu && ddMenu([
+          {label:'↑ Import JSON', action:()=>{fileRef.current?.click();setShowImportMenu(false);}},
+        ])
+      ),
 
       // GitHub dropdown
-      e('div', { style: { position: 'relative' } },
-        e('button', {
-          className: 'tb-btn',
-          style: ghStatus === 'ok' ? { background: '#22c55e', borderColor: '#22c55e' }
-               : ghStatus === 'error' ? { background: '#cc3300', borderColor: '#cc3300' } : {},
-          onClick: ev => { ev.stopPropagation(); setShowGhMenu(m => !m); }
-        }, ghStatus === 'ok' ? '✓ GitHub ▾' : ghStatus === 'error' ? '✕ GitHub ▾' : 'GitHub ▾'),
-        showGhMenu && e('div', { className: 'dd-menu' },
-          e('button', { className: 'dd-item', onClick: () => { pushToGitHub(); setShowGhMenu(false); } },
-            ghStatus === 'saving' ? 'Saving…' : '↑ Save to GitHub'),
-          e('button', { className: 'dd-item', onClick: () => { loadFromRepo(); setShowGhMenu(false); } }, '↻ Load from Repo'),
-          e('button', { className: 'dd-item', onClick: () => { resetToDefault(); setShowGhMenu(false); } }, '↺ Reset to Default'),
-          e('div', { className: 'dd-sep' }),
-          e('button', { className: 'dd-item', onClick: () => { setPatInput(pat); setShowPat(true); setShowGhMenu(false); } }, '🔑 Set Token'),
-          e('button', { className: 'dd-item', onClick: () => { exportJSON(); setShowGhMenu(false); } }, '↓ Download JSON')
-        )
-      )
+      e('div',{style:{position:'relative'}},
+        e('button',{
+          className:'tb-btn',
+          style: ghStatus==='ok' ? {background:'#22c55e',borderColor:'#22c55e'} :
+                 ghStatus==='error' ? {background:'#cc3300',borderColor:'#cc3300'} : {},
+          onClick:ev=>{ev.stopPropagation();setShowGhMenu(m=>!m);setShowExportMenu(false);setShowImportMenu(false);}
+        }, ghStatus==='ok' ? '✓ GitHub ▾' : ghStatus==='error' ? '✕ GitHub ▾' : 'GitHub ▾'),
+        showGhMenu && ddMenu([
+          {label: ghStatus==='saving' ? 'Saving…' : '↑ Save to GitHub', action:()=>{pushToGitHub();setShowGhMenu(false);}},
+          {label:'↻ Load from Repo',   action:()=>{loadFromRepo();setShowGhMenu(false);}},
+          {label:'↺ Reset to Default', action:()=>{resetToDefault();setShowGhMenu(false);}},
+          '---',
+          {label:'🔑 Set Token',       action:()=>{setPatInput(pat);setShowPat(true);setShowGhMenu(false);}},
+        ])
+      ),
+
+      e('button',{className:'tb-btn',onClick:()=>setShowHelp(true)},'?'),
+      e('input',{ref:fileRef,type:'file',accept:'.json',onChange:importJSON,style:{display:'none'}})
     ),
 
-    // Body
-    e('div', { className: 'workflow-body' },
-      // Phase nav
-      e('nav', { className: 'phase-nav' },
-        model.phases.map((ph, i) =>
-          e('button', {
-            key: i,
-            className: `phase-btn${activePhase === i ? ' active' : ''}`,
-            onClick: () => { setActivePhase(i); setEditCtx(null); }
-          },
-            e('span', { className: 'phase-num' }, ph.id),
-            ph.label
-          )
+    // Main
+    e('div',{className:'main'},
+      // Canvas
+      e('div',{className:'canvas-wrap'},
+        e('svg',{
+          ref:svgRef, width:CW, height:CH,
+          onMouseMove:onMove, onMouseUp:onUp,
+          onClick:ev=>{if(ev.target===svgRef.current){setSelEnt(null);setSelRel(null);}},
+          style:{cursor:mode==='addRel'?'crosshair':'default',display:'block'}
+        },
+          e('defs',null,
+            e('marker',{id:'arr',viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'6',markerHeight:'6',orient:'auto'},
+              e('path',{d:'M1 1L9 5L1 9',fill:'none',stroke:'#8BB8CC',strokeWidth:'1.5',strokeLinecap:'round',strokeLinejoin:'round'})),
+            e('marker',{id:'arr-s',viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'6',markerHeight:'6',orient:'auto'},
+              e('path',{d:'M1 1L9 5L1 9',fill:'none',stroke:'#0273B5',strokeWidth:'1.5',strokeLinecap:'round',strokeLinejoin:'round'}))
+          ),
+
+          // Relationships
+          ...model.relationships.map(rel => {
+            const e1=model.entities[rel.from], e2=model.entities[rel.to];
+            if (!e1||!e2) return null;
+            const d=relPath(e1,e2), mid=midPt(e1,e2), sel=selRel===rel.id;
+            return e('g',{key:rel.id,style:{cursor:'pointer'},onClick:ev=>{ev.stopPropagation();setSelRel(rel.id);setSelEnt(null);}},
+              e('path',{d,fill:'none',stroke:'transparent',strokeWidth:12}),
+              e('path',{d,fill:'none',stroke:sel?'#0273B5':'#8BB8CC',strokeWidth:sel?1.75:1,strokeDasharray:sel?'none':'6 3',markerEnd:`url(#arr${sel?'-s':''})`}),
+              e('rect',{x:mid.x-33,y:mid.y-9,width:66,height:17,rx:4,fill:'#fff',stroke:sel?'#0273B5':'#C5D8E4',strokeWidth:0.75}),
+              e('text',{x:mid.x,y:mid.y+3.5,textAnchor:'middle',fontSize:10,fill:sel?'#0273B5':'#5A7A8A',fontFamily:'var(--font)'},rel.label)
+            );
+          }),
+
+          // Entities
+          ...Object.entries(model.entities).map(([name,ent]) => {
+            const h=bh(ent.fields), sel=selEnt===name, isSrc=relSrc===name;
+            return e('g',{key:name,onMouseDown:ev=>onEntDown(ev,name),style:{cursor:drag?.name===name?'grabbing':'grab',userSelect:'none'}},
+              e('rect',{x:ent.x+3,y:ent.y+3,width:BOX_W,height:h,rx:6,fill:'rgba(0,0,0,0.08)'}),
+              e('rect',{x:ent.x,y:ent.y,width:BOX_W,height:h,rx:6,fill:'#fff',stroke:isSrc?'#FFC107':sel?'#0273B5':'#C5D8E4',strokeWidth:sel||isSrc?2:0.75}),
+              e('rect',{x:ent.x,y:ent.y,width:BOX_W,height:HDR_H,rx:6,fill:isSrc?'#FFC107':'#0273B5'}),
+              e('rect',{x:ent.x,y:ent.y+HDR_H-5,width:BOX_W,height:5,fill:isSrc?'#FFC107':'#0273B5'}),
+              e('text',{x:ent.x+10,y:ent.y+18,fontSize:11,fontWeight:600,fill:'white',fontFamily:'var(--font)'},name),
+              ...ent.fields.map((f,i) => {
+                const fy=ent.y+HDR_H+FPAD+i*ROW_H;
+                const isJson = f.type === 'json';
+                return e('g',{key:i,
+                  onMouseEnter: isJson && f.jsonDef ? ev => {
+                    const flipLeft = ev.clientX + 360 > window.innerWidth;
+                    setTooltip({x: flipLeft ? ev.clientX-354 : ev.clientX+14, y:Math.min(ev.clientY-10, window.innerHeight-320), fieldName:`${name}.${f.name}`,def:f.jsonDef});
+                  } : undefined,
+                  onMouseLeave: isJson ? () => { tooltipHideTimer.current = setTimeout(() => setTooltip(null), 120); } : undefined,
+                  onMouseMove:  isJson && f.jsonDef ? ev => {
+                    const flipLeft = ev.clientX + 360 > window.innerWidth;
+                    setTooltip(t => t ? {...t, x: flipLeft ? ev.clientX-354 : ev.clientX+14, y:Math.min(ev.clientY-10, window.innerHeight-320)} : t);
+                  } : undefined,
+                },
+                  i%2===1&&e('rect',{x:ent.x+1,y:fy,width:BOX_W-2,height:ROW_H,fill:'rgba(2,115,181,0.04)'}),
+                  isJson&&e('rect',{x:ent.x+1,y:fy,width:BOX_W-2,height:ROW_H,fill:'rgba(74,143,168,0.08)'}),
+                  f.constraint&&e('text',{x:ent.x+7,y:fy+ROW_H/2+3.5,fontSize:8,fontWeight:700,fill:cColor(f.constraint),fontFamily:'var(--font)'},f.constraint.split(' ')[0]),
+                  e('text',{x:ent.x+52,y:fy+ROW_H/2+3.5,fontSize:10,fill:'#1e293b',fontFamily:'var(--font)'},f.name),
+                  e('text',{x:ent.x+BOX_W-7,y:fy+ROW_H/2+3.5,textAnchor:'end',fontSize:9,fill: isJson?'#4A8FA8':'#64748b',fontFamily:'var(--font)',fontStyle:'italic'},f.type),
+                  isJson&&f.jsonDef&&e('text',{x:ent.x+BOX_W-8,y:fy+ROW_H/2+3.5,textAnchor:'end',fontSize:8,fill:'#4A8FA8',fontFamily:'var(--font)'},'')
+                );
+              }),
+              e('rect',{x:ent.x,y:ent.y,width:BOX_W,height:h,rx:6,fill:'none',stroke:isSrc?'#FFC107':sel?'#0273B5':'#C5D8E4',strokeWidth:sel||isSrc?2:0.75})
+            );
+          })
         )
       ),
 
-      // Content
-      e('div', { className: 'workflow-content' },
-        e('div', { className: 'diagram-area' },
-          // Legend
-          e('div', { className: 'legend' },
-            LEGEND_ITEMS.map(li =>
-              e('div', { key: li.id, className: 'legend-item' },
-                e('div', { className: 'ldot', style: { background: LANE_COLORS[li.id].color } }),
-                li.label
+      // Side panel
+      (selEntData||selRelData) && e('div',{className:'side-panel'},
+        e('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:4}},
+          e('button',{className:'icon-btn',title:'Close panel',style:{fontSize:16},onClick:()=>{setSelEnt(null);setSelRel(null);}},'→')
+        ),
+        selEntData && e(React.Fragment,null,
+          e('div',{className:'panel-label'},'Entity'),
+          editName
+            ? e('div',{style:{display:'flex',gap:4}},
+                e('input',{className:'inp',value:renameV,onChange:ev=>setRenameV(ev.target.value),autoFocus:true,
+                  onKeyDown:ev=>{if(ev.key==='Enter')doRename();if(ev.key==='Escape')setEditName(false);}}),
+                e('button',{style:{background:'#0273B5',color:'white',border:'none',borderRadius:4,padding:'4px 10px',cursor:'pointer',fontSize:12},onClick:doRename},'OK')
               )
+            : e('div',{className:'panel-title'},
+                e('span',{style:{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},selEnt),
+                e('button',{className:'icon-btn blue',title:'Rename',onClick:()=>{setEditName(true);setRenameV(selEnt);}},'✎'),
+                e('button',{className:'icon-btn',title:'Delete entity',onClick:()=>delEnt(selEnt)},'🗑')
+              ),
+
+          e('div',{className:'panel-label'},'Fields'),
+
+          ...selEntData.fields.map((f,i) =>
+            e('div',{key:i,className:'field-row'},
+              e('div',{className:'field-inputs'},
+                e('input',{className:'inp',value:f.name,onChange:ev=>updField(selEnt,i,'name',ev.target.value)}),
+                e('div',{className:'row2'},
+                  e('select',{className:'sel',value:f.type,onChange:ev=>updField(selEnt,i,'type',ev.target.value)},
+                    ...FTYPES.map(t=>e('option',{key:t,value:t},t))),
+                  e('select',{className:'sel',value:f.constraint,onChange:ev=>updField(selEnt,i,'constraint',ev.target.value)},
+                    ...CONS.map(c=>e('option',{key:c,value:c},c||'—')))
+                ),
+                f.type==='json' && e('div',{className:'json-def-box'},
+                  e('div',{className:'panel-label',style:{marginBottom:3}},'JSON Shape (hover preview)'),
+                  e('textarea',{
+                    placeholder:'{\n  "key": "value"\n}',
+                    value: f.jsonDef||'',
+                    onChange: ev => updField(selEnt,i,'jsonDef',ev.target.value)
+                  })
+                )
+              ),
+              e('button',{className:'icon-btn',title:'Delete field',onClick:()=>delField(selEnt,i)},'🗑')
             )
           ),
 
-          // Phase header
-          phase && e('div', { className: 'phase-header' },
-            e('h2', null, `Phase ${phase.id}: ${phase.label}`),
-            phase.sublabel && e('p', null, phase.sublabel)
-          ),
-
-          // Flows
-          phase && phase.flows.map((flow, flowIdx) =>
-            renderFlow(flow, activePhase, flowIdx, phase.flows.length > 1, flowIdx === phase.flows.length - 1)
-          ),
-
-          // Phase note
-          phase && phase.note && e('div', { className: 'phase-note' }, phase.note)
+          e('div',{className:'add-field-box'},
+            e('div',{className:'panel-label'},'Add Field'),
+            e('input',{className:'inp',placeholder:'field_name',value:newF.name,onChange:ev=>setNewF(p=>({...p,name:ev.target.value})),
+              onKeyDown:ev=>ev.key==='Enter'&&addField(selEnt)}),
+            e('div',{className:'row2'},
+              e('select',{className:'sel',value:newF.type,onChange:ev=>setNewF(p=>({...p,type:ev.target.value}))},
+                ...FTYPES.map(t=>e('option',{key:t,value:t},t))),
+              e('select',{className:'sel',value:newF.constraint,onChange:ev=>setNewF(p=>({...p,constraint:ev.target.value}))},
+                ...CONS.map(c=>e('option',{key:c,value:c},c||'—')))
+            ),
+            e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:()=>addField(selEnt)},'+ Add Field')
+          )
         ),
 
-        // Edit panel
-        editMode && renderEditPanel()
+        selRelData && e(React.Fragment,null,
+          e('div',{className:'panel-label'},'Relationship'),
+          e('div',{className:'panel-title'},`${selRelData.from} → ${selRelData.to}`),
+          e('div',null,
+            e('div',{className:'panel-label',style:{marginBottom:4}},'Label'),
+            e('input',{className:'inp',value:selRelData.label,onChange:ev=>updRelLbl(selRel,ev.target.value)})
+          ),
+          e('button',{className:'action-btn',style:{background:'#cc3300',marginTop:4},onClick:()=>delRel(selRel)},'Delete Relationship')
+        )
       )
     ),
 
     // Status bar
-    e('div', { className: 'status-bar' },
-      e('div', { className: 'dot', style: { background: saved ? '#22c55e' : '#f59e0b' } }),
-      e('span', null, saved ? 'Auto-saved to browser' : 'Saving…'),
-      ghStatus === 'error' && e('span', { style: { color: '#cc3300', marginLeft: 8 } }, `GitHub error: ${ghMsg}`),
-      !pat && ghStatus !== 'error' && e('span', { style: { color: '#f59e0b', marginLeft: 8 } }, '· Set a GitHub token (🔑) to save to the repo'),
-      e('span', { style: { marginLeft: 'auto' } },
-        editMode
-          ? (editCtx ? `Editing step — ${laneCount} lane(s) in this phase` : 'Edit mode — click a step to edit')
-          : 'Click a step for details · Use Edit Mode to modify'
+    e('div',{className:'status-bar'},
+      e('div',{className:'dot',style:{background:saved?'#22c55e':'#f59e0b'}}),
+      e('span',null,saved?'Auto-saved to browser':'Saving…'),
+      ghStatus==='error' && e('span',{style:{color:'#cc3300',marginLeft:8}},`GitHub error: ${ghMsg}`),
+      !pat && ghStatus!=='error' && e('span',{style:{color:'#f59e0b',marginLeft:8}},'· Set a GitHub token (🔑) to save directly to the repo'),
+      e('span',{style:{marginLeft:'auto'}},
+        `${Object.keys(model.entities).length} entities · ${model.relationships.length} relationships · drag to reposition · click relationship line to edit`)
+    ),
+
+    // New entity modal
+    showNew && e('div',{className:'modal-overlay'},
+      e('div',{className:'modal'},
+        e('div',{className:'modal-title'},'New Entity'),
+        e('input',{className:'inp',placeholder:'ENTITY_NAME',value:newEntN,onChange:ev=>setNewEntN(ev.target.value),autoFocus:true,
+          onKeyDown:ev=>{if(ev.key==='Enter')addEnt();if(ev.key==='Escape')setShowNew(false);}}),
+        e('div',{className:'modal-row'},
+          e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:addEnt},'Create'),
+          e('button',{className:'action-btn',style:{background:'#888'},onClick:()=>setShowNew(false)},'Cancel')
+        )
       )
     ),
 
-    // Detail modal (view mode)
-    detailStep && !editMode && e('div', {
-      className: 'overlay',
-      onClick: () => setDetailStep(null)
+    // JSON tooltip
+    tooltip && e('div',{
+      className:'json-tooltip',
+      style:{left:tooltip.x,top:tooltip.y},
+      onMouseEnter:()=>clearTimeout(tooltipHideTimer.current),
+      onMouseLeave:()=>setTooltip(null)
     },
-      e('div', { className: 'detail-panel', onClick: ev => ev.stopPropagation() },
-        e('button', { className: 'dp-close', onClick: () => setDetailStep(null) }, '✕'),
-        e('h3', null, detailStep.label),
-        detailStep.badge && e('div', {
-          className: 'dp-badge',
-          style: {
-            background: (detailStep.badgeColor || '#64748b') + '22',
-            color: detailStep.badgeColor || '#64748b'
-          }
-        }, detailStep.badge),
-        detailStep.desc && e('p', { className: 'dp-desc' }, detailStep.desc),
-        detailStep.items && detailStep.items.length > 0 && e('ul', { className: 'dp-items' },
-          detailStep.items.map((item, i) => e('li', { key: i }, item))
+      e('div',{className:'json-tooltip-label'},tooltip.fieldName),
+      tooltip.def
+    ),
+
+    // Help modal
+    showHelp && e('div',{className:'modal-overlay', onClick:()=>setShowHelp(false)},
+      e('div',{className:'help-modal', onClick:ev=>ev.stopPropagation()},
+        e('h2',null,'The Ray — ERD Editor Guide'),
+
+        e('p',null,'A visual tool for designing and sharing The Ray\'s database schema. Edit entities and fields, define relationships, document JSON field shapes, and export SQL scripts — all from the browser.'),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Quick start'),
+          e('p',{style:{marginBottom:6}},e('strong',null,'Without a GitHub token'),' — you can still use the full editor:'),
+          e('ul',null,
+            e('li',null,'Changes auto-save to your browser (green dot = saved locally)'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'Export ▾'),' → ',e('strong',null,'Model JSON'),' to download a snapshot to your computer'),
+            e('li',null,'Share the file with a teammate who can import and push it'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'Export ▾'),' → ',e('strong',null,'SQL'),' to generate a CREATE TABLE script for your database'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'Export ▾'),' → ',e('strong',null,'JSON Definitions'),' to export all documented JSON field shapes')
+          ),
+          e('p',{style:{marginTop:10,marginBottom:6}},e('strong',null,'With a GitHub token (recommended)'),' — saves go directly to the shared repo:'),
+          e('ul',null,
+            e('li',null,'Click ',e('span',{className:'help-badge'},'GitHub ▾'),' → ',e('strong',null,'Set Token'),', paste your PAT, click Save Token'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'GitHub ▾'),' → ',e('strong',null,'Save to GitHub'),' to commit your changes to ',e('code',null,'working.json'),' — instantly visible to the whole team'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'GitHub ▾'),' → ',e('strong',null,'Load from Repo'),' to pull the latest version someone else saved'),
+            e('li',null,'Each person uses their own token — changes are attributed to your GitHub account')
+          ),
+          e('p',{style:{marginTop:10,marginBottom:6}},e('strong',null,'Typical workflow:')),
+          e('ol',{style:{paddingLeft:18,fontSize:13,lineHeight:1.8}},
+            e('li',null,'Open the editor — it loads the latest shared model automatically'),
+            e('li',null,'Add or edit entities, fields, relationships, and JSON shapes'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'GitHub ▾'),' → ',e('strong',null,'Save to GitHub'),' to share with the team'),
+            e('li',null,'When the schema is ready, export a SQL script to scaffold the database')
+          )
         ),
-        detailStep.tags && detailStep.tags.length > 0 && e('div', { className: 'dp-tags' },
-          detailStep.tags.map((tag, i) => e('span', { key: i, className: 'tag' }, tag))
+
+        e('div',{className:'help-section'},
+          e('h3',null,'How saves work'),
+          e('ul',null,
+            e('li',null,e('strong',null,'Auto-save (browser): '),'Every change is saved automatically to your browser\'s local storage. The green dot in the status bar confirms this. It persists across refreshes but is local to your device and browser only — no one else can see it.'),
+            e('li',null,e('strong',null,'Save to GitHub: '),'Clicking ',e('span',{className:'help-badge'},'↑ Save to GitHub'),' commits the current model as ',e('code',null,'working.json'),' directly to the shared repo. This is what the rest of the team sees.'),
+            e('li',null,e('strong',null,'Load from Repo: '),'Clicking ',e('span',{className:'help-badge'},'↻ Load from Repo'),' fetches the latest ',e('code',null,'working.json'),' from the repo, overwriting your local session.'),
+            e('li',null,e('strong',null,'Reset to Default: '),'Restores the original baseline model (',e('code',null,'default.json'),') — use this to start fresh from the canonical schema.')
+          )
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Saving to GitHub (team collaboration)'),
+          e('p',null,'Changes are last-write-wins — if two people save at the same time, the second save overwrites the first. Coordinate with your team before saving.'),
+          e('p',{style:{marginTop:8}},e('strong',null,'To get a GitHub token:')),
+          e('ul',null,
+            e('li',null,'Go to github.com/settings/tokens → Fine-grained tokens → New token'),
+            e('li',null,'Resource owner: ',e('strong',null,'CultivateGeospatial')),
+            e('li',null,'Repository access: Only select repositories → ',e('strong',null,'theray-erd-editor')),
+            e('li',null,'Permissions: Contents → ',e('strong',null,'Read and write')),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'🔑'),' in the toolbar, paste your token, and click Save Token. It\'s stored in your browser only.')
+          )
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Export SQL Schema'),
+          e('p',null,'Click ',e('span',{className:'help-badge'},'↓ Export SQL ▾'),' and choose a dialect to download a SQL script that creates all tables, primary keys, unique constraints, indexes, and foreign keys.'),
+          e('ul',{style:{marginTop:6}},
+            e('li',null,e('strong',null,'MS SQL Server'),' — uses UNIQUEIDENTIFIER, NVARCHAR, BIT, DATETIME2, NVARCHAR(MAX) for JSON'),
+            e('li',null,e('strong',null,'PostgreSQL'),' — uses UUID, VARCHAR, BOOLEAN, TIMESTAMPTZ, JSONB')
+          ),
+          e('p',{style:{marginTop:6}},e('strong',null,'Script structure:')),
+          e('ul',{style:{marginTop:4}},
+            e('li',null,'CREATE TABLE statements for each entity (columns + PK + UNIQUE constraints)'),
+            e('li',null,'CREATE INDEX statements for any INDEX-constrained fields'),
+            e('li',null,'ALTER TABLE ADD CONSTRAINT statements for all FK relationships at the end (avoids table ordering issues)')
+          ),
+          e('p',{style:{marginTop:6,color:'#f59e0b'}},e('strong',null,'Note: '),'FK references are inferred by field name convention (e.g. workspace_id → workspace table). Review the script before running against a live database.')
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Export JSON'),
+          e('p',null,'Click ',e('span',{className:'help-badge'},'↓ Export JSON'),' to download the current model as a ',e('code',null,'working.json'),' file to your computer. Use this to:'),
+          e('ul',{style:{marginTop:6}},
+            e('li',null,'Keep a local backup before making large changes'),
+            e('li',null,'Share a snapshot with someone who doesn\'t have a GitHub token'),
+            e('li',null,'Work offline and import back later')
+          )
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Import JSON'),
+          e('p',null,'Click ',e('span',{className:'help-badge'},'↑ Import JSON'),' to load a JSON file from your computer into the editor. This replaces the current canvas with the imported model.'),
+          e('p',{style:{marginTop:6}},e('strong',null,'To use a file someone shared with you:')),
+          e('ul',{style:{marginTop:4}},
+            e('li',null,'Save the JSON file they sent to your computer'),
+            e('li',null,'Click ',e('span',{className:'help-badge'},'↑ Import JSON'),' and select the file'),
+            e('li',null,'Review the changes, then click ',e('span',{className:'help-badge'},'↑ Save to GitHub'),' to publish them for the team')
+          ),
+          e('p',{style:{marginTop:6,color:'#f59e0b'}},e('strong',null,'Note: '),'Import immediately replaces your current session — export a backup first if you want to preserve your current state.')
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Using the canvas'),
+          e('ul',null,
+            e('li',null,e('strong',null,'Drag entities: '),'Click and drag any entity box to reposition it.'),
+            e('li',null,e('strong',null,'Select entity: '),'Click an entity to open its fields in the side panel.'),
+            e('li',null,e('strong',null,'Select relationship: '),'Click a relationship line to edit its label or delete it.'),
+            e('li',null,e('strong',null,'Add entity: '),'Click ',e('span',{className:'help-badge'},'+ Entity'),', enter a name (auto-uppercased), press Enter or Create.'),
+            e('li',null,e('strong',null,'Add relationship: '),'Click ',e('span',{className:'help-badge'},'+ Relationship'),', click the source entity, then click the target entity. Enter a label in the dialog.'),
+            e('li',null,e('strong',null,'Rename entity: '),'Select an entity, click the ✎ pencil icon in the side panel.'),
+            e('li',null,e('strong',null,'Delete entity or relationship: '),'Select it, click the 🗑 trash icon in the side panel.'),
+            e('li',null,e('strong',null,'Add field: '),'Select an entity, fill in the Add Field form at the bottom of the side panel and click + Add Field or press Enter.'),
+            e('li',null,e('strong',null,'Edit field: '),'Select an entity — all fields are directly editable in the side panel.'),
+            e('li',null,e('strong',null,'Delete field: '),'Click 🗑 on the field row in the side panel.')
+          )
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Relationships & labels'),
+          e('p',null,'Relationships are drawn as dashed arrows between entities. Each has a short label describing the nature of the association. Labels are documentation only — they have no effect on the SQL export or runtime behavior.'),
+          e('p',{style:{marginTop:8}},e('strong',null,'Adding a relationship:')),
+          e('ul',{style:{marginTop:4}},
+            e('li',null,'Click ',e('span',{className:'help-badge'},'+ Relationship'),' in the toolbar (button turns yellow)'),
+            e('li',null,'Click the source entity, then click the target entity'),
+            e('li',null,'A dialog appears — type or select a label, then click Add')
+          ),
+          e('p',{style:{marginTop:8}},e('strong',null,'Suggested labels and what they mean:')),
+          e('ul',{style:{marginTop:4}},
+            e('li',null,e('strong',null,'has'),' — parent owns child records (Workspace has Members)'),
+            e('li',null,e('strong',null,'owns'),' — strong ownership, child cannot exist without parent'),
+            e('li',null,e('strong',null,'contains'),' — parent groups child entities (Project contains Scenarios)'),
+            e('li',null,e('strong',null,'belongs to'),' — child references a parent (inverse of has/contains)'),
+            e('li',null,e('strong',null,'references'),' — weak link, child points to another entity optionally'),
+            e('li',null,e('strong',null,'produces'),' — one entity creates/generates another (Scenario produces Run)'),
+            e('li',null,e('strong',null,'initialized from'),' — entity is seeded or configured from another'),
+            e('li',null,e('strong',null,'grants'),' — permission or access is given to another entity'),
+            e('li',null,e('strong',null,'stores'),' — one entity is the container for another\'s data'),
+            e('li',null,e('strong',null,'inputs'),' — one entity provides data consumed by another')
+          ),
+          e('p',{style:{marginTop:8,color:'#64748b'}},'You can also type a custom label — the suggestions are a starting point, not a fixed list.')
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'JSON field shapes'),
+          e('p',null,'Fields typed as ',e('code',null,'json'),' are highlighted in teal on the canvas. You can document the expected JSON structure for each one so the team has a shared reference while designing.'),
+          e('p',{style:{marginTop:8}},e('strong',null,'Defining a shape:')),
+          e('ul',{style:{marginTop:4}},
+            e('li',null,'Select an entity in the side panel'),
+            e('li',null,'Find a ',e('code',null,'json'),'-typed field — a textarea labeled "JSON Shape (hover preview)" appears below it'),
+            e('li',null,'Paste or type an example JSON object representing the expected structure'),
+            e('li',null,'The shape is saved with the model (in ',e('code',null,'working.json'),') and shared with the team when you save to GitHub')
+          ),
+          e('p',{style:{marginTop:8}},e('strong',null,'Viewing a shape:')),
+          e('ul',{style:{marginTop:4}},
+            e('li',null,'Hover any teal-highlighted json field row on the canvas to see a tooltip with the field name and defined shape'),
+            e('li',null,'Fields with no shape defined show no tooltip — the teal highlight still indicates the field is json type')
+          ),
+          e('p',{style:{marginTop:8}},e('strong',null,'JSON fields currently in this model:')),
+          e('ul',{style:{marginTop:4}},
+            ...Object.entries(model.entities).flatMap(([ename, ent]) =>
+              ent.fields.filter(f => f.type === 'json').map(f =>
+                e('li',{key:`${ename}.${f.name}`},
+                  e('strong',null,`${ename}.${f.name}`),
+                  f.jsonDef ? ' — hover on canvas to preview shape' : e('span',{style:{color:'#f59e0b'}},' — no shape defined yet')
+                )
+              )
+            )
+          ),
+          e('p',{style:{marginTop:8,color:'#f59e0b'}},e('strong',null,'Note: '),'JSON shapes are documentation only — they are not validated at runtime and are excluded from SQL export scripts.')
+        ),
+
+        e('div',{className:'help-section'},
+          e('h3',null,'Field types & constraints'),
+          e('ul',null,
+            e('li',null,e('strong',null,'Types: '),'uuid, string, int, bigint, bool, json, enum, timestamp, float, text'),
+            e('li',null,e('strong',null,'Constraints: '),'PK (primary key), FK (foreign key), FK nullable, UNIQUE, NOT NULL, INDEX')
+          )
+        ),
+
+        e('div',{className:'help-close-row'},
+          e('button',{className:'action-btn',style:{background:'#0273B5',width:'auto',padding:'8px 24px'},onClick:()=>setShowHelp(false)},'Close')
         )
       )
     ),
 
     // PAT modal
-    showPat && e('div', { className: 'modal-overlay' },
-      e('div', { className: 'modal' },
-        e('div', { className: 'modal-title' }, 'GitHub Token'),
-        e('div', { className: 'modal-sub' }, 'Create a fine-grained PAT at github.com/settings/tokens with Contents: Read & Write for CultivateGeospatial/theray. Stored in your browser only.'),
-        e('input', {
-          className: 'inp', placeholder: 'github_pat_…', value: patInput, autoFocus: true,
-          onChange: ev => setPatInput(ev.target.value),
-          onKeyDown: ev => { if (ev.key === 'Enter') savePat(); if (ev.key === 'Escape') setShowPat(false); }
+    showPat && e('div',{className:'modal-overlay'},
+      e('div',{className:'modal'},
+        e('div',{className:'modal-title'},'GitHub Token'),
+        e('div',{className:'modal-sub'},'Create a fine-grained PAT at github.com/settings/tokens with Contents: Read & Write for CultivateGeospatial/theray-erd-editor. Stored in your browser only.'),
+        e('input',{className:'inp',placeholder:'github_pat_…',value:patInput,onChange:ev=>setPatInput(ev.target.value),autoFocus:true,
+          onKeyDown:ev=>{if(ev.key==='Enter')savePat();if(ev.key==='Escape')setShowPat(false);}}),
+        e('div',{className:'modal-row'},
+          e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:savePat},'Save Token'),
+          pat && e('button',{className:'action-btn',style:{background:'#cc3300'},onClick:()=>{localStorage.removeItem(PAT_KEY);setPat('');setShowPat(false);}},'Clear Token'),
+          e('button',{className:'action-btn',style:{background:'#888'},onClick:()=>setShowPat(false)},'Cancel')
+        )
+      )
+    ),
+
+    // Add relationship modal
+    pendRel && e('div',{className:'modal-overlay'},
+      e('div',{className:'modal'},
+        e('div',{className:'modal-title'},'Add Relationship'),
+        e('div',{className:'modal-sub'},`${pendRel.from}  →  ${pendRel.to}`),
+        e('input',{
+          className:'inp', list:'rel-suggestions',
+          placeholder:'has, contains, owns…',
+          value:relLbl, onChange:ev=>setRelLbl(ev.target.value), autoFocus:true,
+          onKeyDown:ev=>{if(ev.key==='Enter')confirmRel();if(ev.key==='Escape')setPendRel(null);}
         }),
-        e('div', { className: 'modal-row' },
-          e('button', { className: 'action-btn', style: { background: '#0273B5' }, onClick: savePat }, 'Save Token'),
-          pat && e('button', { className: 'action-btn', style: { background: '#cc3300' }, onClick: () => { localStorage.removeItem(PAT_KEY); setPat(''); setShowPat(false); } }, 'Clear Token'),
-          e('button', { className: 'action-btn', style: { background: '#888' }, onClick: () => setShowPat(false) }, 'Cancel')
+        e('datalist',{id:'rel-suggestions'},
+          ['has','owns','contains','belongs to','references','produces',
+           'initialized from','grants','stores','inputs','relates to',
+           'manages','assigns','links to','triggers','depends on'].map(s=>e('option',{key:s,value:s}))
+        ),
+        e('div',{className:'modal-row'},
+          e('button',{className:'action-btn',style:{background:'#0273B5'},onClick:confirmRel},'Add'),
+          e('button',{className:'action-btn',style:{background:'#888'},onClick:()=>setPendRel(null)},'Cancel')
         )
       )
     )
