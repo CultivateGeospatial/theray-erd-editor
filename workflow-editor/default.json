@@ -735,6 +735,11 @@
               "sublabel": "Ops / Admin"
             },
             {
+              "id": "api",
+              "label": ".NET API",
+              "sublabel": "App Service"
+            },
+            {
               "id": "process",
               "label": "Processing VM",
               "sublabel": "Python Pipeline"
@@ -765,6 +770,70 @@
                   "connectors": [],
                   "async": false
                 },
+                "api": null,
+                "process": null
+              }
+            },
+            {
+              "id": "col_1",
+              "cells": {
+                "admin": null,
+                "api": {
+                  "key": "api-annual-vm-start",
+                  "label": "Start Processing VM",
+                  "sublabel": "Azure Compute API — start VM for annual run",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "Admin action calls the .NET API which triggers the Azure Compute API to start the Processing VM for the annual pipeline run.",
+                  "items": [
+                    "Calls Azure Compute API: Virtual Machines - Start",
+                    "If VM already running, call is a no-op",
+                    "API fires and returns immediately — does not wait for VM to boot"
+                  ],
+                  "tags": [
+                    "Azure Compute API",
+                    "VM Start",
+                    "Admin-triggered"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "process": null
+              }
+            },
+            {
+              "id": "col_2",
+              "cells": {
+                "admin": null,
+                "api": null,
+                "process": {
+                  "key": "vm-annual-boot",
+                  "label": "VM Boots",
+                  "sublabel": "Windows Service starts; runs annual pipeline",
+                  "badge": "Processing VM",
+                  "badgeColor": "#dc2626",
+                  "desc": "Azure starts the Processing VM. Once booted, the Windows Service starts automatically and begins the annual pipeline run for all active DOT states.",
+                  "items": [
+                    "Azure VM boot time: typically 1–3 minutes",
+                    "Windows Service configured to start automatically on boot",
+                    "Service detects annual pipeline job and begins processing",
+                    "Runs for all active DOT states in sequence"
+                  ],
+                  "tags": [
+                    "Azure VM",
+                    "Windows Service autostart",
+                    "Annual pipeline"
+                  ],
+                  "connectors": [],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_3",
+              "cells": {
+                "admin": null,
+                "api": null,
                 "process": {
                   "key": "pipeline-scripts",
                   "label": "Run Pipeline Scripts",
@@ -791,9 +860,10 @@
               }
             },
             {
-              "id": "col_1",
+              "id": "col_4",
               "cells": {
                 "admin": null,
+                "api": null,
                 "process": {
                   "key": "pipeline-wro",
                   "label": "Create WRO Service",
@@ -820,9 +890,10 @@
               }
             },
             {
-              "id": "col_2",
+              "id": "col_5",
               "cells": {
                 "admin": null,
+                "api": null,
                 "process": {
                   "key": "pipeline-blob",
                   "label": "Rasters → Azure Blob",
