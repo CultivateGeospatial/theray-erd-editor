@@ -697,7 +697,8 @@ function App() {
     e('div', { className: 'toolbar', onClick: ev => ev.stopPropagation() },
       e('span', { className: 'toolbar-title' }, 'The Ray'),
       e('span', { className: 'toolbar-subtitle' }, 'System Workflow'),
-      e('a', { href: '../', style: { color: 'rgba(255,255,255,0.75)', fontSize: '11px', textDecoration: 'none', marginLeft: '6px', padding: '3px 8px', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '4px', whiteSpace: 'nowrap' } }, '⇄ ERD Editor'),
+      e('a', { href: '../erd-editor/', style: { color: 'rgba(255,255,255,0.75)', fontSize: '11px', textDecoration: 'none', marginLeft: '6px', padding: '3px 8px', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '4px', whiteSpace: 'nowrap' } }, '⇄ ERD Editor'),
+      e('a', { href: '../', style: { color: 'rgba(255,255,255,0.75)', fontSize: '11px', textDecoration: 'none', marginLeft: '2px', padding: '3px 8px', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '4px', whiteSpace: 'nowrap' } }, '⌂ Home'),
       e('div', { className: 'toolbar-divider' }),
       e('button', {
         className: `tb-btn${editMode ? ' active' : ''}`,
