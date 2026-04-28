@@ -937,6 +937,7 @@ function App() {
     // Toolbar
     e('div',{className:'toolbar', onClick:ev=>ev.stopPropagation()},
       e('span',{className:'toolbar-title'},'The Ray — ERD Editor'),
+      e('a',{href:'./workflow-editor/',style:{color:'rgba(255,255,255,0.75)',fontSize:'11px',textDecoration:'none',marginLeft:'6px',padding:'3px 8px',border:'1px solid rgba(255,255,255,0.25)',borderRadius:'4px',whiteSpace:'nowrap'}},'⇄ Workflow Editor'),
       e('div',{className:'toolbar-divider'}),
       e('button',{className:'tb-btn',onClick:()=>setShowNew(true)},'+ Entity'),
       e('button',{
