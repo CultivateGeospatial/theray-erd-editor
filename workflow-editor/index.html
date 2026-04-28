@@ -99,20 +99,23 @@ body { font-family: var(--font); font-size: 13px; color: var(--text); display: f
   border-radius: 10px; overflow: hidden;
 }
 .swimlane-wrap + .swimlane-wrap { margin-top: 16px; }
+.swimlane-scroll { overflow-x: auto; }
 .swimlane-row {
   display: flex; border-bottom: 1px solid var(--border); min-height: 90px;
+  min-width: max-content;
 }
 .swimlane-row:last-child { border-bottom: none; }
 .lane-label {
   width: 148px; min-width: 148px; padding: 16px 14px;
   display: flex; flex-direction: column; justify-content: center;
   border-right: 2px solid var(--border); font-size: 11.5px; font-weight: 700;
+  position: sticky; left: 0; z-index: 2;
 }
 .lane-label .lname { font-size: 11.5px; font-weight: 700; }
 .lane-label .lsub { font-size: 10.5px; font-weight: 400; opacity: 0.65; margin-top: 2px; }
 .lane-body {
   flex: 1; padding: 24px 20px 16px 20px; display: flex; align-items: center;
-  flex-wrap: nowrap; gap: 0; overflow-x: auto;
+  flex-wrap: nowrap; gap: 0;
 }
 
 /* ── Steps ── */
@@ -679,7 +682,9 @@ function App() {
         className: 'swimlane-wrap',
         style: { marginBottom: isLast ? 0 : 16 }
       },
-        flow.lanes.map(lane => renderLane(lane, phaseIdx, flowIdx, flow.columns))
+        e('div', { className: 'swimlane-scroll' },
+          flow.lanes.map(lane => renderLane(lane, phaseIdx, flowIdx, flow.columns))
+        )
       )
     );
   };
