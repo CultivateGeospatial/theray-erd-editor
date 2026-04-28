@@ -12,9 +12,29 @@
             {
               "id": "admin",
               "label": "The Ray",
-              "sublabel": "Admin",
-              "steps": [
-                {
+              "sublabel": "Admin"
+            },
+            {
+              "id": "api",
+              "label": ".NET API",
+              "sublabel": "App Service"
+            },
+            {
+              "id": "data",
+              "label": "PostgreSQL",
+              "sublabel": "Main DB"
+            },
+            {
+              "id": "process",
+              "label": "ArcGIS",
+              "sublabel": "Portal + Server"
+            }
+          ],
+          "columns": [
+            {
+              "id": "col_0",
+              "cells": {
+                "admin": {
                   "key": "admin-portal",
                   "label": "Log into Admin Portal",
                   "sublabel": "Internal CGS admin UI",
@@ -26,65 +46,17 @@
                     "Role: CGS Admin — system-wide access",
                     "Authentication via Azure AD (separate policy from DOT users)"
                   ],
-                  "tags": ["React", "Azure AD", ".NET API"],
-                  "connectors": ["create-tenant"]
-                },
-                {
-                  "key": "create-tenant",
-                  "label": "Create DOT Workspace",
-                  "sublabel": "State code, subdomain, schema",
-                  "badge": "Tenant Setup",
-                  "badgeColor": "#0273B5",
-                  "desc": "Minimum config to bring a new state DOT online. This record drives subdomain routing and all downstream isolation.",
-                  "items": [
-                    "state_code: 2-letter FIPS (PA, TX, etc.)",
-                    "subdomain: penndot → penndot.corridor-iq.org",
-                    "schema_name: tenant-isolated PostgreSQL schema",
-                    "Custom DOT domains also supported (e.g., ciq.penndot.org)"
+                  "tags": [
+                    "React",
+                    "Azure AD",
+                    ".NET API"
                   ],
-                  "tags": ["DOT_WORKSPACES", "PostgreSQL schema-per-tenant"],
-                  "connectors": ["config-layers"]
-                },
-                {
-                  "key": "config-layers",
-                  "label": "Configure Default Layers",
-                  "sublabel": "DATASET_CONFIGS per analysis type",
-                  "badge": "Tenant Setup",
-                  "badgeColor": "#0273B5",
-                  "desc": "Each state gets default analysis layers with derivation rules stored as DATASET_CONFIGS. These are the baseline for all scenario weight configurations.",
-                  "items": [
-                    "Configured per analysis type: Solar, Overhead TX, Underground TX",
-                    "Each layer has a derivation rule (rasterize, slope, distance, etc.)",
-                    "Default weights set here — users override per scenario",
-                    "Source data from state-level DEMs in the shared Azure Blob bucket"
+                  "connectors": [
+                    "create-tenant"
                   ],
-                  "tags": ["DATASET_CONFIGS", "JSON weight config"],
-                  "connectors": ["provision-portal"]
+                  "async": false
                 },
-                {
-                  "key": "provision-portal",
-                  "label": "Provision ArcGIS Portal",
-                  "sublabel": "Portal group + image service",
-                  "badge": "ArcGIS Setup",
-                  "badgeColor": "#dc2626",
-                  "desc": "Creates an ArcGIS Portal group that scopes content access to this tenant.",
-                  "items": [
-                    "One Portal group per DOT workspace",
-                    "Service account used for all API calls — DOT users never log into Portal",
-                    "One Image Service registered per workspace via image_service_id",
-                    "Group membership managed by .NET API"
-                  ],
-                  "tags": ["ArcGIS Portal API", "Service Account (least-privilege)"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "api",
-              "label": ".NET API",
-              "sublabel": "App Service",
-              "steps": [
-                {
+                "api": {
                   "key": "api-provision",
                   "label": "Provision Tenant Schema",
                   "sublabel": "Runs InitialMigration in new schema",
@@ -97,47 +69,17 @@
                     "Tables: PROJECTS, SCENARIOS, RUNS, CUSTOMER_UPLOADS, DATASET_CONFIGS, etc.",
                     "Inserts DOT_WORKSPACES record in main DB"
                   ],
-                  "tags": ["FluentMigrator", "InitialMigration.cs", "PostgreSQL schema isolation"],
-                  "connectors": ["api-layers"]
-                },
-                {
-                  "key": "api-layers",
-                  "label": "Seed Layer Config",
-                  "sublabel": "Writes DATASET_CONFIGS rows",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "Stores initial DATASET_CONFIGS rows in the new tenant schema from a default template.",
-                  "items": [
-                    "Seeded from default config template per analysis type",
-                    "Admin can customize before finalizing onboarding",
-                    "WORKSPACE_LAYER_PERMISSIONS records created for default layers"
+                  "tags": [
+                    "FluentMigrator",
+                    "InitialMigration.cs",
+                    "PostgreSQL schema isolation"
                   ],
-                  "tags": ["DATASET_CONFIGS", "WORKSPACE_LAYER_PERMISSIONS"],
-                  "connectors": ["api-portal-group"]
-                },
-                {
-                  "key": "api-portal-group",
-                  "label": "Register Portal Group",
-                  "sublabel": "Server-side ArcGIS REST call",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "Server-side ArcGIS REST call to create the tenant Portal group.",
-                  "items": [
-                    "Uses ArcGIS REST API (server-side, not user-facing OAuth)",
-                    "Returns portal_group_id stored on DOT_WORKSPACES",
-                    "Group is linked to tenant image service (image_service_id)"
+                  "connectors": [
+                    "api-layers"
                   ],
-                  "tags": ["ArcGIS REST API", "AzureIdentity", "Service Account"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "data",
-              "label": "PostgreSQL",
-              "sublabel": "Main DB",
-              "steps": [
-                {
+                  "async": false
+                },
+                "data": {
                   "key": "db-tenant",
                   "label": "DOT_WORKSPACES row",
                   "sublabel": "state_code, subdomain, schema_name, portal_group_id",
@@ -152,17 +94,14 @@
                     "image_service_id",
                     "created_at"
                   ],
-                  "tags": ["Main DB", "NOT in tenant schema"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "process",
-              "label": "ArcGIS",
-              "sublabel": "Portal + Server",
-              "steps": [
-                {
+                  "tags": [
+                    "Main DB",
+                    "NOT in tenant schema"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "process": {
                   "key": "arcgis-group",
                   "label": "Portal Group Created",
                   "sublabel": "Scoped to tenant; image service registered",
@@ -175,10 +114,141 @@
                     "One Image Service per workspace registered to this group",
                     "No DOT users are ever direct Portal users"
                   ],
-                  "tags": ["ArcGIS Portal", "Groups API"],
-                  "connectors": []
+                  "tags": [
+                    "ArcGIS Portal",
+                    "Groups API"
+                  ],
+                  "connectors": [],
+                  "async": false
                 }
-              ]
+              }
+            },
+            {
+              "id": "col_1",
+              "cells": {
+                "admin": {
+                  "key": "create-tenant",
+                  "label": "Create DOT Workspace",
+                  "sublabel": "State code, subdomain, schema",
+                  "badge": "Tenant Setup",
+                  "badgeColor": "#0273B5",
+                  "desc": "Minimum config to bring a new state DOT online. This record drives subdomain routing and all downstream isolation.",
+                  "items": [
+                    "state_code: 2-letter FIPS (PA, TX, etc.)",
+                    "subdomain: penndot → penndot.corridor-iq.org",
+                    "schema_name: tenant-isolated PostgreSQL schema",
+                    "Custom DOT domains also supported (e.g., ciq.penndot.org)"
+                  ],
+                  "tags": [
+                    "DOT_WORKSPACES",
+                    "PostgreSQL schema-per-tenant"
+                  ],
+                  "connectors": [
+                    "config-layers"
+                  ],
+                  "async": false
+                },
+                "api": {
+                  "key": "api-layers",
+                  "label": "Seed Layer Config",
+                  "sublabel": "Writes DATASET_CONFIGS rows",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "Stores initial DATASET_CONFIGS rows in the new tenant schema from a default template.",
+                  "items": [
+                    "Seeded from default config template per analysis type",
+                    "Admin can customize before finalizing onboarding",
+                    "WORKSPACE_LAYER_PERMISSIONS records created for default layers"
+                  ],
+                  "tags": [
+                    "DATASET_CONFIGS",
+                    "WORKSPACE_LAYER_PERMISSIONS"
+                  ],
+                  "connectors": [
+                    "api-portal-group"
+                  ],
+                  "async": false
+                },
+                "data": null,
+                "process": null
+              }
+            },
+            {
+              "id": "col_2",
+              "cells": {
+                "admin": {
+                  "key": "config-layers",
+                  "label": "Configure Default Layers",
+                  "sublabel": "DATASET_CONFIGS per analysis type",
+                  "badge": "Tenant Setup",
+                  "badgeColor": "#0273B5",
+                  "desc": "Each state gets default analysis layers with derivation rules stored as DATASET_CONFIGS. These are the baseline for all scenario weight configurations.",
+                  "items": [
+                    "Configured per analysis type: Solar, Overhead TX, Underground TX",
+                    "Each layer has a derivation rule (rasterize, slope, distance, etc.)",
+                    "Default weights set here — users override per scenario",
+                    "Source data from state-level DEMs in the shared Azure Blob bucket"
+                  ],
+                  "tags": [
+                    "DATASET_CONFIGS",
+                    "JSON weight config"
+                  ],
+                  "connectors": [
+                    "provision-portal"
+                  ],
+                  "async": false
+                },
+                "api": {
+                  "key": "api-portal-group",
+                  "label": "Register Portal Group",
+                  "sublabel": "Server-side ArcGIS REST call",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "Server-side ArcGIS REST call to create the tenant Portal group.",
+                  "items": [
+                    "Uses ArcGIS REST API (server-side, not user-facing OAuth)",
+                    "Returns portal_group_id stored on DOT_WORKSPACES",
+                    "Group is linked to tenant image service (image_service_id)"
+                  ],
+                  "tags": [
+                    "ArcGIS REST API",
+                    "AzureIdentity",
+                    "Service Account"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "data": null,
+                "process": null
+              }
+            },
+            {
+              "id": "col_3",
+              "cells": {
+                "admin": {
+                  "key": "provision-portal",
+                  "label": "Provision ArcGIS Portal",
+                  "sublabel": "Portal group + image service",
+                  "badge": "ArcGIS Setup",
+                  "badgeColor": "#dc2626",
+                  "desc": "Creates an ArcGIS Portal group that scopes content access to this tenant.",
+                  "items": [
+                    "One Portal group per DOT workspace",
+                    "Service account used for all API calls — DOT users never log into Portal",
+                    "One Image Service registered per workspace via image_service_id",
+                    "Group membership managed by .NET API"
+                  ],
+                  "tags": [
+                    "ArcGIS Portal API",
+                    "Service Account (least-privilege)"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "api": null,
+                "data": null,
+                "process": null
+              }
             }
           ]
         }
@@ -196,9 +266,24 @@
             {
               "id": "user",
               "label": "DOT User",
-              "sublabel": "e.g. PennDOT",
-              "steps": [
-                {
+              "sublabel": "e.g. PennDOT"
+            },
+            {
+              "id": "api",
+              "label": "App Layer",
+              "sublabel": "Front Door + .NET"
+            },
+            {
+              "id": "data",
+              "label": "PostgreSQL",
+              "sublabel": "Main DB"
+            }
+          ],
+          "columns": [
+            {
+              "id": "col_0",
+              "cells": {
+                "user": {
                   "key": "user-navigate",
                   "label": "Navigate to Subdomain",
                   "sublabel": "penndot.corridor-iq.org",
@@ -210,47 +295,16 @@
                     "DNS points to Azure Front Door",
                     "Subdomain extracted from Host header — sets tenant context"
                   ],
-                  "tags": ["Azure Front Door", "Custom Domains"],
-                  "connectors": ["user-login"]
-                },
-                {
-                  "key": "user-login",
-                  "label": "Log In",
-                  "sublabel": "Azure AD / Portal OAuth",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "Authentication via Azure AD or Portal OAuth. Identity provider configurable per tenant.",
-                  "items": [
-                    "Azure AD: standard OAuth2 flow with the DOT's own AAD tenant",
-                    "Portal OAuth: for users with existing ArcGIS credentials",
-                    "Auth token exchanged for application JWT scoped to tenant"
+                  "tags": [
+                    "Azure Front Door",
+                    "Custom Domains"
                   ],
-                  "tags": ["Azure AD", "Portal OAuth 2.0", "JWT"],
-                  "connectors": ["user-dashboard"]
-                },
-                {
-                  "key": "user-dashboard",
-                  "label": "View Dashboard",
-                  "sublabel": "Their projects only — no workspace picker",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "User lands on their state's dashboard. No workspace selector visible — tenant context is transparent via subdomain + JWT.",
-                  "items": [
-                    "Shows only this state's projects",
-                    "Admin features (workspace management) not visible to regular DOT users",
-                    "Nav: Dashboard → Projects → Scenarios → Runs"
+                  "connectors": [
+                    "user-login"
                   ],
-                  "tags": ["React 18", "Vite", "ArcGIS Maps SDK 4.x"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "api",
-              "label": "App Layer",
-              "sublabel": "Front Door + .NET",
-              "steps": [
-                {
+                  "async": false
+                },
+                "api": {
                   "key": "frontdoor",
                   "label": "Azure Front Door",
                   "sublabel": "TLS, WAF, subdomain routing",
@@ -263,10 +317,63 @@
                     "Routes all *.corridor-iq.org subdomains to the same App Service",
                     "Custom DOT domains (e.g., ciq.penndot.org) also route here"
                   ],
-                  "tags": ["Azure Front Door", "WAF", "Custom Domains"],
-                  "connectors": ["api-auth"]
+                  "tags": [
+                    "Azure Front Door",
+                    "WAF",
+                    "Custom Domains"
+                  ],
+                  "connectors": [
+                    "api-auth"
+                  ],
+                  "async": false
                 },
-                {
+                "data": {
+                  "key": "db-lookup",
+                  "label": "Tenant Lookup",
+                  "sublabel": "WHERE subdomain = 'penndot'",
+                  "badge": "PostgreSQL – Main DB",
+                  "badgeColor": "#b45309",
+                  "desc": "Simple indexed query resolving the subdomain to a tenant record.",
+                  "items": [
+                    "SELECT * FROM dot_workspaces WHERE subdomain = $1",
+                    "Indexed on subdomain column",
+                    "Returns schema_name used for all subsequent tenant queries"
+                  ],
+                  "tags": [
+                    "Main DB",
+                    "Index on subdomain"
+                  ],
+                  "connectors": [],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_1",
+              "cells": {
+                "user": {
+                  "key": "user-login",
+                  "label": "Log In",
+                  "sublabel": "Azure AD / Portal OAuth",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "Authentication via Azure AD or Portal OAuth. Identity provider configurable per tenant.",
+                  "items": [
+                    "Azure AD: standard OAuth2 flow with the DOT's own AAD tenant",
+                    "Portal OAuth: for users with existing ArcGIS credentials",
+                    "Auth token exchanged for application JWT scoped to tenant"
+                  ],
+                  "tags": [
+                    "Azure AD",
+                    "Portal OAuth 2.0",
+                    "JWT"
+                  ],
+                  "connectors": [
+                    "user-dashboard"
+                  ],
+                  "async": false
+                },
+                "api": {
                   "key": "api-auth",
                   "label": "Resolve Tenant",
                   "sublabel": "Subdomain → DOT_WORKSPACES lookup",
@@ -279,10 +386,42 @@
                     "Returns workspace_id, schema_name, portal_group_id",
                     "404 if subdomain not registered"
                   ],
-                  "tags": ["Host header parsing", "DOT_WORKSPACES lookup"],
-                  "connectors": ["api-jwt"]
+                  "tags": [
+                    "Host header parsing",
+                    "DOT_WORKSPACES lookup"
+                  ],
+                  "connectors": [
+                    "api-jwt"
+                  ],
+                  "async": false
                 },
-                {
+                "data": null
+              }
+            },
+            {
+              "id": "col_2",
+              "cells": {
+                "user": {
+                  "key": "user-dashboard",
+                  "label": "View Dashboard",
+                  "sublabel": "Their projects only — no workspace picker",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "User lands on their state's dashboard. No workspace selector visible — tenant context is transparent via subdomain + JWT.",
+                  "items": [
+                    "Shows only this state's projects",
+                    "Admin features (workspace management) not visible to regular DOT users",
+                    "Nav: Dashboard → Projects → Scenarios → Runs"
+                  ],
+                  "tags": [
+                    "React 18",
+                    "Vite",
+                    "ArcGIS Maps SDK 4.x"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "api": {
                   "key": "api-jwt",
                   "label": "Issue JWT",
                   "sublabel": "tenant_id, schema_name, role embedded",
@@ -294,10 +433,24 @@
                     "schema_name in token routes all DB queries to correct schema",
                     "Standard expiry + refresh token flow"
                   ],
-                  "tags": ["JWT", "Claims-based auth", "Roles: Viewer / Editor / Manager / Admin"],
-                  "connectors": ["react-load"]
+                  "tags": [
+                    "JWT",
+                    "Claims-based auth",
+                    "Roles: Viewer / Editor / Manager / Admin"
+                  ],
+                  "connectors": [
+                    "react-load"
+                  ],
+                  "async": false
                 },
-                {
+                "data": null
+              }
+            },
+            {
+              "id": "col_3",
+              "cells": {
+                "user": null,
+                "api": {
                   "key": "react-load",
                   "label": "React App Loads",
                   "sublabel": "Scoped to tenant; no workspace selector shown",
@@ -310,32 +463,16 @@
                     "All requests include Authorization: Bearer {jwt}",
                     "UI scoped to user role — Manager sees more than Viewer"
                   ],
-                  "tags": ["React 18", "Vite", "ArcGIS Maps SDK 4.x"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "data",
-              "label": "PostgreSQL",
-              "sublabel": "Main DB",
-              "steps": [
-                {
-                  "key": "db-lookup",
-                  "label": "Tenant Lookup",
-                  "sublabel": "WHERE subdomain = 'penndot'",
-                  "badge": "PostgreSQL – Main DB",
-                  "badgeColor": "#b45309",
-                  "desc": "Simple indexed query resolving the subdomain to a tenant record.",
-                  "items": [
-                    "SELECT * FROM dot_workspaces WHERE subdomain = $1",
-                    "Indexed on subdomain column",
-                    "Returns schema_name used for all subsequent tenant queries"
+                  "tags": [
+                    "React 18",
+                    "Vite",
+                    "ArcGIS Maps SDK 4.x"
                   ],
-                  "tags": ["Main DB", "Index on subdomain"],
-                  "connectors": []
-                }
-              ]
+                  "connectors": [],
+                  "async": false
+                },
+                "data": null
+              }
             }
           ]
         }
@@ -353,9 +490,24 @@
             {
               "id": "user",
               "label": "DOT User",
-              "sublabel": "Editor / Manager",
-              "steps": [
-                {
+              "sublabel": "Editor / Manager"
+            },
+            {
+              "id": "api",
+              "label": ".NET API",
+              "sublabel": "App Service"
+            },
+            {
+              "id": "data",
+              "label": "PostgreSQL",
+              "sublabel": "Tenant Schema"
+            }
+          ],
+          "columns": [
+            {
+              "id": "col_0",
+              "cells": {
+                "user": {
                   "key": "create-project",
                   "label": "Create Project",
                   "sublabel": "Name + draw study area polygon on map",
@@ -367,64 +519,16 @@
                     "Boundary stored as GeoJSON",
                     "Multiple scenarios can exist within one project"
                   ],
-                  "tags": ["GeoJSON polygon", "PROJECTS table"],
-                  "connectors": ["create-scenario"]
-                },
-                {
-                  "key": "create-scenario",
-                  "label": "Create Scenario",
-                  "sublabel": "Name + pick analysis type",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "A Scenario is one configuration of the suitability model within a project. Multiple scenarios allow side-by-side comparison.",
-                  "items": [
-                    "Required: name + analysis type (Solar / Overhead TX / Underground TX)",
-                    "Linked to parent project",
-                    "Can be cloned from an existing scenario to compare alternatives"
+                  "tags": [
+                    "GeoJSON polygon",
+                    "PROJECTS table"
                   ],
-                  "tags": ["SCENARIOS table", "JSON weights"],
-                  "connectors": ["config-weights"]
-                },
-                {
-                  "key": "config-weights",
-                  "label": "Configure Weights",
-                  "sublabel": "Layer weights via Suitability Modeler",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "Core analysis setup. Users assign importance weights to each dataset layer. Weights drive the suitability model output.",
-                  "items": [
-                    "Each layer gets a relative weight",
-                    "Layers sourced from DATASET_CONFIGS for this tenant",
-                    "Custom uploaded layers appear here once status = complete",
-                    "Custom Suitability Modeler widget (CGS-built replacement for Esri's closed-source version)"
+                  "connectors": [
+                    "create-scenario"
                   ],
-                  "tags": ["DATASET_CONFIGS", "WORKSPACE_LAYER_PERMISSIONS", "Suitability Modeler widget"],
-                  "connectors": ["save-scenario"]
+                  "async": false
                 },
-                {
-                  "key": "save-scenario",
-                  "label": "Save Scenario",
-                  "sublabel": "Ready to run or adjust later",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "Scenario saved and visible in dashboard. Can run immediately or be adjusted later.",
-                  "items": [
-                    "SCENARIOS.status = configured",
-                    "Weight values locked as JSON",
-                    "Run button becomes active",
-                    "Scenario can be duplicated for variations"
-                  ],
-                  "tags": ["SCENARIOS", "weight_config JSON"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "api",
-              "label": ".NET API",
-              "sublabel": "App Service",
-              "steps": [
-                {
+                "api": {
                   "key": "api-project",
                   "label": "Validate + Store Project",
                   "sublabel": "GeoJSON polygon validated",
@@ -436,46 +540,16 @@
                     "Written to PROJECTS in tenant schema",
                     "project_id returned to frontend"
                   ],
-                  "tags": ["GeoJSON validation", "Tenant schema write"],
-                  "connectors": ["api-scenario"]
-                },
-                {
-                  "key": "api-scenario",
-                  "label": "Store Scenario",
-                  "sublabel": "Links to project, analysis type set",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "Creates SCENARIOS record linked to the project.",
-                  "items": [
-                    "Inserts SCENARIOS row with project_id FK",
-                    "analysis_type: solar | overhead_tx | underground_tx",
-                    "Initial status: draft"
+                  "tags": [
+                    "GeoJSON validation",
+                    "Tenant schema write"
                   ],
-                  "tags": ["SCENARIOS table", "FK → PROJECTS"],
-                  "connectors": ["api-weights"]
-                },
-                {
-                  "key": "api-weights",
-                  "label": "Serialize Weights",
-                  "sublabel": "JSON weight config on SCENARIOS",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "Weight config validated and stored as JSON on the scenario.",
-                  "items": [
-                    "Validates layer weight references exist in DATASET_CONFIGS",
-                    "Stores complete JSON weight map on SCENARIOS.weight_config"
+                  "connectors": [
+                    "api-scenario"
                   ],
-                  "tags": ["JSON serialization", "SCENARIOS.weight_config"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "data",
-              "label": "PostgreSQL",
-              "sublabel": "Tenant Schema",
-              "steps": [
-                {
+                  "async": false
+                },
+                "data": {
                   "key": "db-project",
                   "label": "PROJECTS row",
                   "sublabel": "name, boundary GeoJSON, workspace_id",
@@ -488,10 +562,63 @@
                     "workspace_id (FK → DOT_WORKSPACES)",
                     "created_by, created_at"
                   ],
-                  "tags": ["Tenant schema", "GeoJSON"],
-                  "connectors": ["db-scenario"]
+                  "tags": [
+                    "Tenant schema",
+                    "GeoJSON"
+                  ],
+                  "connectors": [
+                    "db-scenario"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_1",
+              "cells": {
+                "user": {
+                  "key": "create-scenario",
+                  "label": "Create Scenario",
+                  "sublabel": "Name + pick analysis type",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "A Scenario is one configuration of the suitability model within a project. Multiple scenarios allow side-by-side comparison.",
+                  "items": [
+                    "Required: name + analysis type (Solar / Overhead TX / Underground TX)",
+                    "Linked to parent project",
+                    "Can be cloned from an existing scenario to compare alternatives"
+                  ],
+                  "tags": [
+                    "SCENARIOS table",
+                    "JSON weights"
+                  ],
+                  "connectors": [
+                    "config-weights"
+                  ],
+                  "async": false
                 },
-                {
+                "api": {
+                  "key": "api-scenario",
+                  "label": "Store Scenario",
+                  "sublabel": "Links to project, analysis type set",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "Creates SCENARIOS record linked to the project.",
+                  "items": [
+                    "Inserts SCENARIOS row with project_id FK",
+                    "analysis_type: solar | overhead_tx | underground_tx",
+                    "Initial status: draft"
+                  ],
+                  "tags": [
+                    "SCENARIOS table",
+                    "FK → PROJECTS"
+                  ],
+                  "connectors": [
+                    "api-weights"
+                  ],
+                  "async": false
+                },
+                "data": {
                   "key": "db-scenario",
                   "label": "SCENARIOS row",
                   "sublabel": "name, type, weight_config JSON, project_id",
@@ -504,10 +631,88 @@
                     "weight_config (JSON)",
                     "status: draft | configured | running | complete"
                   ],
-                  "tags": ["Tenant schema", "JSON weight_config"],
-                  "connectors": []
+                  "tags": [
+                    "Tenant schema",
+                    "JSON weight_config"
+                  ],
+                  "connectors": [],
+                  "async": false
                 }
-              ]
+              }
+            },
+            {
+              "id": "col_2",
+              "cells": {
+                "user": {
+                  "key": "config-weights",
+                  "label": "Configure Weights",
+                  "sublabel": "Layer weights via Suitability Modeler",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "Core analysis setup. Users assign importance weights to each dataset layer. Weights drive the suitability model output.",
+                  "items": [
+                    "Each layer gets a relative weight",
+                    "Layers sourced from DATASET_CONFIGS for this tenant",
+                    "Custom uploaded layers appear here once status = complete",
+                    "Custom Suitability Modeler widget (CGS-built replacement for Esri's closed-source version)"
+                  ],
+                  "tags": [
+                    "DATASET_CONFIGS",
+                    "WORKSPACE_LAYER_PERMISSIONS",
+                    "Suitability Modeler widget"
+                  ],
+                  "connectors": [
+                    "save-scenario"
+                  ],
+                  "async": false
+                },
+                "api": {
+                  "key": "api-weights",
+                  "label": "Serialize Weights",
+                  "sublabel": "JSON weight config on SCENARIOS",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "Weight config validated and stored as JSON on the scenario.",
+                  "items": [
+                    "Validates layer weight references exist in DATASET_CONFIGS",
+                    "Stores complete JSON weight map on SCENARIOS.weight_config"
+                  ],
+                  "tags": [
+                    "JSON serialization",
+                    "SCENARIOS.weight_config"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "data": null
+              }
+            },
+            {
+              "id": "col_3",
+              "cells": {
+                "user": {
+                  "key": "save-scenario",
+                  "label": "Save Scenario",
+                  "sublabel": "Ready to run or adjust later",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "Scenario saved and visible in dashboard. Can run immediately or be adjusted later.",
+                  "items": [
+                    "SCENARIOS.status = configured",
+                    "Weight values locked as JSON",
+                    "Run button becomes active",
+                    "Scenario can be duplicated for variations"
+                  ],
+                  "tags": [
+                    "SCENARIOS",
+                    "weight_config JSON"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "api": null,
+                "data": null
+              }
             }
           ]
         }
@@ -527,9 +732,19 @@
             {
               "id": "admin",
               "label": "The Ray",
-              "sublabel": "Ops / Admin",
-              "steps": [
-                {
+              "sublabel": "Ops / Admin"
+            },
+            {
+              "id": "process",
+              "label": "Processing VM",
+              "sublabel": "Python Pipeline"
+            }
+          ],
+          "columns": [
+            {
+              "id": "col_0",
+              "cells": {
+                "admin": {
                   "key": "pipeline-trigger",
                   "label": "Trigger Annual Pipeline",
                   "sublabel": "Kick off data refresh for all states",
@@ -542,17 +757,15 @@
                     "Produces the default layer set that DOT users see as their baseline rasters",
                     "Uses configuration from DATASET_CONFIGS per state"
                   ],
-                  "tags": ["Annual batch", "Per-state", "Not user-triggered"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "process",
-              "label": "Processing VM",
-              "sublabel": "Python Pipeline",
-              "steps": [
-                {
+                  "tags": [
+                    "Annual batch",
+                    "Per-state",
+                    "Not user-triggered"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "process": {
                   "key": "pipeline-scripts",
                   "label": "Run Pipeline Scripts",
                   "sublabel": "Per-state default layers → CRF rasters",
@@ -565,10 +778,23 @@
                     "One set of output rasters per state — not per user, project, or scenario",
                     "Runs against the shared Azure Blob bucket (imagery folder)"
                   ],
-                  "tags": ["Python GP Code", "CRF conversion", "imagery/default/"],
-                  "connectors": ["pipeline-wro"]
-                },
-                {
+                  "tags": [
+                    "Python GP Code",
+                    "CRF conversion",
+                    "imagery/default/"
+                  ],
+                  "connectors": [
+                    "pipeline-wro"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_1",
+              "cells": {
+                "admin": null,
+                "process": {
                   "key": "pipeline-wro",
                   "label": "Create WRO Service",
                   "sublabel": "One service per state — shared by all users & projects",
@@ -581,10 +807,23 @@
                     "Service is shared across ALL projects and scenarios in that state",
                     "Clip is NOT baked in — applied at render time via JSON"
                   ],
-                  "tags": ["ArcGIS WRO Service", "Per-state service", "Shared across projects"],
-                  "connectors": ["pipeline-blob"]
-                },
-                {
+                  "tags": [
+                    "ArcGIS WRO Service",
+                    "Per-state service",
+                    "Shared across projects"
+                  ],
+                  "connectors": [
+                    "pipeline-blob"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_2",
+              "cells": {
+                "admin": null,
+                "process": {
                   "key": "pipeline-blob",
                   "label": "Rasters → Azure Blob",
                   "sublabel": "imagery/{state}/default/",
@@ -597,10 +836,15 @@
                     "One set per state; refreshed annually",
                     "WRO service reads directly from this path"
                   ],
-                  "tags": ["imagery/default/", "Shared bucket", "Annual refresh"],
-                  "connectors": []
+                  "tags": [
+                    "imagery/default/",
+                    "Shared bucket",
+                    "Annual refresh"
+                  ],
+                  "connectors": [],
+                  "async": false
                 }
-              ]
+              }
             }
           ]
         },
@@ -612,9 +856,29 @@
             {
               "id": "user",
               "label": "DOT User",
-              "sublabel": "App UI",
-              "steps": [
-                {
+              "sublabel": "App UI"
+            },
+            {
+              "id": "api",
+              "label": ".NET API",
+              "sublabel": "App Service"
+            },
+            {
+              "id": "data",
+              "label": "Azure Blob",
+              "sublabel": "Shared Bucket"
+            },
+            {
+              "id": "process",
+              "label": "Processing VM",
+              "sublabel": "Azure VM"
+            }
+          ],
+          "columns": [
+            {
+              "id": "col_0",
+              "cells": {
+                "user": {
                   "key": "user-upload-nav",
                   "label": "Navigate to Data Uploads",
                   "sublabel": "Data Management section in app",
@@ -627,47 +891,16 @@
                     "Upload button opens file picker",
                     "Only visible to users with Editor or Manager role"
                   ],
-                  "tags": ["Data Management UI", "Role: Editor / Manager"],
-                  "connectors": ["user-upload"]
-                },
-                {
-                  "key": "user-upload",
-                  "label": "Select & Upload File",
-                  "sublabel": "DEM, GeoTIFF, vector format",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "DOT users can upload their own elevation or vector data to use in analysis alongside default layers.",
-                  "items": [
-                    "DEM, GeoTIFF, vector formats (exact support TBD)",
-                    "File streamed to Blob via API",
-                    "User sees upload progress + status badge"
+                  "tags": [
+                    "Data Management UI",
+                    "Role: Editor / Manager"
                   ],
-                  "tags": ["File upload", "CUSTOMER_UPLOADS"],
-                  "connectors": ["user-notify"]
-                },
-                {
-                  "key": "user-notify",
-                  "label": "Layer Ready",
-                  "sublabel": "Available in scenario weight config",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "Once processing is complete, the user is notified and the custom layer becomes available in scenario configuration.",
-                  "items": [
-                    "UI polls CUSTOMER_UPLOADS status (or WebSocket push — TBD)",
-                    "Custom layer appears in scenario weight panel",
-                    "Marked as user-provided (distinct from default layers)"
+                  "connectors": [
+                    "user-upload"
                   ],
-                  "tags": ["Polling / WebSocket TBD", "status: complete"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "api",
-              "label": ".NET API",
-              "sublabel": "App Service",
-              "steps": [
-                {
+                  "async": false
+                },
+                "api": {
                   "key": "api-upload-validate",
                   "label": "Validate + Stream to Blob",
                   "sublabel": "Format check → user-uploads/{state}/",
@@ -680,48 +913,16 @@
                     "Streams to blob: user-uploads/{state_code}/{filename}",
                     "Returns blob path"
                   ],
-                  "tags": ["Azure Blob SDK", "Format validation"],
-                  "connectors": ["api-upload-record"]
-                },
-                {
-                  "key": "api-upload-record",
-                  "label": "Create Upload Record",
-                  "sublabel": "CUSTOMER_UPLOADS status: pending",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "Creates a CUSTOMER_UPLOADS record to queue the job for the Processing VM.",
-                  "items": [
-                    "workspace_id, filename, blob_path",
-                    "status: pending",
-                    "upload_type: dem | vector"
+                  "tags": [
+                    "Azure Blob SDK",
+                    "Format validation"
                   ],
-                  "tags": ["CUSTOMER_UPLOADS", "status: pending"],
-                  "connectors": ["api-vm-start"]
-                },
-                {
-                  "key": "api-vm-start",
-                  "label": "Start Processing VM",
-                  "sublabel": "Azure Compute API — start VM if not running",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "After creating the CUSTOMER_UPLOADS record, the .NET API calls the Azure Compute API to start the Processing VM if it is not already running. This keeps the VM off when idle to reduce cost.",
-                  "items": [
-                    "Calls Azure Compute API: Virtual Machines - Start",
-                    "If VM is already running (another job in progress), call is a no-op",
-                    "VM name / resource group stored in app config (per environment)",
-                    "API does not wait for VM to boot — it fires and returns immediately"
+                  "connectors": [
+                    "api-upload-record"
                   ],
-                  "tags": ["Azure Compute API", "VM Start", "Cost optimization"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "data",
-              "label": "Azure Blob",
-              "sublabel": "Shared Bucket",
-              "steps": [
-                {
+                  "async": false
+                },
+                "data": {
                   "key": "blob-upload",
                   "label": "Raw File Stored",
                   "sublabel": "user-uploads/{state}/{upload_id}/{filename}",
@@ -734,33 +935,16 @@
                     "Private — not directly user-accessible",
                     "Retained for potential reprocessing"
                   ],
-                  "tags": ["Azure Blob", "user-uploads/ folder"],
-                  "connectors": ["blob-imagery"]
-                },
-                {
-                  "key": "blob-imagery",
-                  "label": "CRF Written",
-                  "sublabel": "imagery/{state}/custom/{upload_id}.crf",
-                  "badge": "Azure Blob (Shared Bucket)",
-                  "badgeColor": "#b45309",
-                  "desc": "After processing, the Cloud Raster Format output is written to the imagery/ path in the same shared bucket and served by ArcGIS Image Service.",
-                  "items": [
-                    "Same shared Azure Blob bucket, different folder",
-                    "Path: imagery/{state_code}/custom/{upload_id}.crf",
-                    "CRF: cloud-native format optimized for ArcGIS Image Service",
-                    "Tenant-scoped by state_code in path"
+                  "tags": [
+                    "Azure Blob",
+                    "user-uploads/ folder"
                   ],
-                  "tags": ["Cloud Raster Format (CRF)", "imagery/ folder", "Shared bucket"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "process",
-              "label": "Processing VM",
-              "sublabel": "Azure VM",
-              "steps": [
-                {
+                  "connectors": [
+                    "blob-imagery"
+                  ],
+                  "async": false
+                },
+                "process": {
                   "key": "vm-boot",
                   "label": "VM Boots",
                   "sublabel": "Azure starts VM; Windows Service starts automatically",
@@ -773,10 +957,85 @@
                     "Service immediately begins polling on startup",
                     "VM stays running until all pending records are processed, then idles / deallocates"
                   ],
-                  "tags": ["Azure VM", "Windows Service autostart", "1–3 min boot time"],
-                  "connectors": ["vm-poll"]
+                  "tags": [
+                    "Azure VM",
+                    "Windows Service autostart",
+                    "1–3 min boot time"
+                  ],
+                  "connectors": [
+                    "vm-poll"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_1",
+              "cells": {
+                "user": {
+                  "key": "user-upload",
+                  "label": "Select & Upload File",
+                  "sublabel": "DEM, GeoTIFF, vector format",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "DOT users can upload their own elevation or vector data to use in analysis alongside default layers.",
+                  "items": [
+                    "DEM, GeoTIFF, vector formats (exact support TBD)",
+                    "File streamed to Blob via API",
+                    "User sees upload progress + status badge"
+                  ],
+                  "tags": [
+                    "File upload",
+                    "CUSTOMER_UPLOADS"
+                  ],
+                  "connectors": [
+                    "user-notify"
+                  ],
+                  "async": false
                 },
-                {
+                "api": {
+                  "key": "api-upload-record",
+                  "label": "Create Upload Record",
+                  "sublabel": "CUSTOMER_UPLOADS status: pending",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "Creates a CUSTOMER_UPLOADS record to queue the job for the Processing VM.",
+                  "items": [
+                    "workspace_id, filename, blob_path",
+                    "status: pending",
+                    "upload_type: dem | vector"
+                  ],
+                  "tags": [
+                    "CUSTOMER_UPLOADS",
+                    "status: pending"
+                  ],
+                  "connectors": [
+                    "api-vm-start"
+                  ],
+                  "async": false
+                },
+                "data": {
+                  "key": "blob-imagery",
+                  "label": "CRF Written",
+                  "sublabel": "imagery/{state}/custom/{upload_id}.crf",
+                  "badge": "Azure Blob (Shared Bucket)",
+                  "badgeColor": "#b45309",
+                  "desc": "After processing, the Cloud Raster Format output is written to the imagery/ path in the same shared bucket and served by ArcGIS Image Service.",
+                  "items": [
+                    "Same shared Azure Blob bucket, different folder",
+                    "Path: imagery/{state_code}/custom/{upload_id}.crf",
+                    "CRF: cloud-native format optimized for ArcGIS Image Service",
+                    "Tenant-scoped by state_code in path"
+                  ],
+                  "tags": [
+                    "Cloud Raster Format (CRF)",
+                    "imagery/ folder",
+                    "Shared bucket"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "process": {
                   "key": "vm-poll",
                   "label": "Windows Service Polls DB",
                   "sublabel": "CUSTOMER_UPLOADS WHERE status = 'pending'",
@@ -789,10 +1048,62 @@
                     "VM can be started on-demand by .NET API when a new upload arrives",
                     "Processes uploads one at a time or in batch"
                   ],
-                  "tags": ["Windows Service", "CUSTOMER_UPLOADS polling"],
-                  "connectors": ["vm-download"]
+                  "tags": [
+                    "Windows Service",
+                    "CUSTOMER_UPLOADS polling"
+                  ],
+                  "connectors": [
+                    "vm-download"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_2",
+              "cells": {
+                "user": {
+                  "key": "user-notify",
+                  "label": "Layer Ready",
+                  "sublabel": "Available in scenario weight config",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "Once processing is complete, the user is notified and the custom layer becomes available in scenario configuration.",
+                  "items": [
+                    "UI polls CUSTOMER_UPLOADS status (or WebSocket push — TBD)",
+                    "Custom layer appears in scenario weight panel",
+                    "Marked as user-provided (distinct from default layers)"
+                  ],
+                  "tags": [
+                    "Polling / WebSocket TBD",
+                    "status: complete"
+                  ],
+                  "connectors": [],
+                  "async": false
                 },
-                {
+                "api": {
+                  "key": "api-vm-start",
+                  "label": "Start Processing VM",
+                  "sublabel": "Azure Compute API — start VM if not running",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "After creating the CUSTOMER_UPLOADS record, the .NET API calls the Azure Compute API to start the Processing VM if it is not already running. This keeps the VM off when idle to reduce cost.",
+                  "items": [
+                    "Calls Azure Compute API: Virtual Machines - Start",
+                    "If VM is already running (another job in progress), call is a no-op",
+                    "VM name / resource group stored in app config (per environment)",
+                    "API does not wait for VM to boot — it fires and returns immediately"
+                  ],
+                  "tags": [
+                    "Azure Compute API",
+                    "VM Start",
+                    "Cost optimization"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "data": null,
+                "process": {
                   "key": "vm-download",
                   "label": "Download Raw File",
                   "sublabel": "Pulls from user-uploads/ in blob via SAS token",
@@ -805,10 +1116,25 @@
                     "Downloads to local VM temp directory for processing",
                     "Sets CUSTOMER_UPLOADS.status = processing before starting"
                   ],
-                  "tags": ["Azure Blob download", "SAS token", "CUSTOMER_UPLOADS status: processing"],
-                  "connectors": ["vm-process"]
-                },
-                {
+                  "tags": [
+                    "Azure Blob download",
+                    "SAS token",
+                    "CUSTOMER_UPLOADS status: processing"
+                  ],
+                  "connectors": [
+                    "vm-process"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_3",
+              "cells": {
+                "user": null,
+                "api": null,
+                "data": null,
+                "process": {
                   "key": "vm-process",
                   "label": "Python: Convert to CRF",
                   "sublabel": "Passes bucket, token, location, tenantId",
@@ -821,10 +1147,25 @@
                     "Parameters passed through: bucket, token, location (./dem-name), tenantId",
                     "CRF written to imagery/{state}/custom/"
                   ],
-                  "tags": ["Python GP Code", "ArcPy / GDAL", "CRF conversion"],
-                  "connectors": ["vm-custom-wro"]
-                },
-                {
+                  "tags": [
+                    "Python GP Code",
+                    "ArcPy / GDAL",
+                    "CRF conversion"
+                  ],
+                  "connectors": [
+                    "vm-custom-wro"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_4",
+              "cells": {
+                "user": null,
+                "api": null,
+                "data": null,
+                "process": {
                   "key": "vm-custom-wro",
                   "label": "Publish Custom WRO Service",
                   "sublabel": "ArcGIS Portal — clip applied on the fly",
@@ -837,10 +1178,25 @@
                     "Clip polygon still applied via JSON at render time (not stored per project)",
                     "Custom service registered alongside the default state service in ArcGIS Portal"
                   ],
-                  "tags": ["Custom WRO Service", "imagery/custom/", "On-the-fly clip"],
-                  "connectors": ["vm-complete"]
-                },
-                {
+                  "tags": [
+                    "Custom WRO Service",
+                    "imagery/custom/",
+                    "On-the-fly clip"
+                  ],
+                  "connectors": [
+                    "vm-complete"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_5",
+              "cells": {
+                "user": null,
+                "api": null,
+                "data": null,
+                "process": {
                   "key": "vm-complete",
                   "label": "Status → Complete",
                   "sublabel": "CUSTOMER_UPLOADS updated; VM idles / deallocates",
@@ -853,10 +1209,15 @@
                     "VM Windows Service idles until next job",
                     "VM may be deallocated after idle timeout to reduce cost"
                   ],
-                  "tags": ["CUSTOMER_UPLOADS", "status: complete", "VM auto-deallocation"],
-                  "connectors": []
+                  "tags": [
+                    "CUSTOMER_UPLOADS",
+                    "status: complete",
+                    "VM auto-deallocation"
+                  ],
+                  "connectors": [],
+                  "async": false
                 }
-              ]
+              }
             }
           ]
         }
@@ -874,9 +1235,29 @@
             {
               "id": "user",
               "label": "DOT User",
-              "sublabel": "",
-              "steps": [
-                {
+              "sublabel": ""
+            },
+            {
+              "id": "api",
+              "label": ".NET API",
+              "sublabel": "App Service"
+            },
+            {
+              "id": "data",
+              "label": "PostgreSQL",
+              "sublabel": "Tenant Schema"
+            },
+            {
+              "id": "process",
+              "label": "ArcGIS",
+              "sublabel": "WRO Service"
+            }
+          ],
+          "columns": [
+            {
+              "id": "col_0",
+              "cells": {
+                "user": {
                   "key": "run-trigger",
                   "label": "Trigger Run",
                   "sublabel": "Select scenario, click Run",
@@ -888,33 +1269,16 @@
                     "Status badge updates to: running",
                     "User can navigate away; run continues in background"
                   ],
-                  "tags": ["Async run", "RUNS table"],
-                  "connectors": ["run-complete"]
-                },
-                {
-                  "key": "run-complete",
-                  "label": "Results Displayed",
-                  "sublabel": "Suitability map rendered in viewer",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "When the GP job finishes, the run record is updated and the user is notified.",
-                  "items": [
-                    "RUNS.status → complete",
-                    "Notification shown in dashboard",
-                    "Result rasters available in map viewer",
-                    "Run duration and job_id recorded for audit"
+                  "tags": [
+                    "Async run",
+                    "RUNS table"
                   ],
-                  "tags": ["RUNS status: complete", "Notification"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "api",
-              "label": ".NET API",
-              "sublabel": "App Service",
-              "steps": [
-                {
+                  "connectors": [
+                    "run-complete"
+                  ],
+                  "async": false
+                },
+                "api": {
                   "key": "api-run-create",
                   "label": "Create Run Record",
                   "sublabel": "RUNS status: queued",
@@ -927,65 +1291,16 @@
                     "started_at, submitted_by",
                     "Returns run_id to frontend for polling"
                   ],
-                  "tags": ["RUNS table", "status: queued"],
-                  "connectors": ["api-run-build-json"]
-                },
-                {
-                  "key": "api-run-build-json",
-                  "label": "Build Runtime JSON",
-                  "sublabel": "weight_config + clip polygon from scenario",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "The API reads the scenario's weight config and project boundary polygon, then builds the JSON payload that will be applied to the WRO service portal item at render time.",
-                  "items": [
-                    "weight_config: from SCENARIOS.weight_config",
-                    "clip_polygon: from PROJECTS.boundary (the study area the user drew)",
-                    "Clip is at the SCENARIO level — same clip drives both analysis and visualization",
-                    "JSON structure matches what ArcGIS portal item accepts for runtime overrides"
+                  "tags": [
+                    "RUNS table",
+                    "status: queued"
                   ],
-                  "tags": ["Runtime JSON", "weight_config + clip_polygon", "Scenario-level clip"],
-                  "connectors": ["api-run-submit"]
-                },
-                {
-                  "key": "api-run-submit",
-                  "label": "Apply JSON to WRO Service",
-                  "sublabel": "Patch portal item with clip + weights",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "The .NET API patches the ArcGIS Portal item for the state's WRO service with the runtime JSON payload. This sets the clip and weights for this render without a separate GP job.",
-                  "items": [
-                    "PATCH to ArcGIS Portal item for the state's WRO service",
-                    "Payload: { clip_polygon: <GeoJSON>, weights: <weight_config> }",
-                    "No job_id returned — this is synchronous portal item update",
-                    "WRO service immediately reflects new clip + weights on next tile request"
+                  "connectors": [
+                    "api-run-build-json"
                   ],
-                  "tags": ["ArcGIS Portal item PATCH", "Runtime JSON", "No GP job needed"],
-                  "connectors": ["api-run-finish"]
+                  "async": false
                 },
-                {
-                  "key": "api-run-finish",
-                  "label": "Run → Complete",
-                  "sublabel": "RUNS record updated; result URL returned",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "After the WRO portal item is updated, the API marks the run complete and returns the service URL for display in the frontend.",
-                  "items": [
-                    "RUNS.status → complete",
-                    "Returns WRO service URL (scoped to tenant) to the React frontend",
-                    "No blob result path — output is a live service render, not a stored file",
-                    "TBD: whether a snapshot/export is stored to blob for download"
-                  ],
-                  "tags": ["RUNS.status: complete", "WRO service URL", "Export TBD"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "data",
-              "label": "PostgreSQL",
-              "sublabel": "Tenant Schema",
-              "steps": [
-                {
+                "data": {
                   "key": "db-run",
                   "label": "RUNS row",
                   "sublabel": "scenario_id, status, started_at",
@@ -998,33 +1313,16 @@
                     "job_id: ArcGIS GP job identifier",
                     "started_at, completed_at, result_blob_path"
                   ],
-                  "tags": ["RUNS table", "Tenant schema"],
-                  "connectors": ["db-clip-source"]
-                },
-                {
-                  "key": "db-clip-source",
-                  "label": "Clip Source: SCENARIOS",
-                  "sublabel": "Boundary polygon read from scenario at render time",
-                  "badge": "PostgreSQL – Tenant Schema",
-                  "badgeColor": "#b45309",
-                  "desc": "The clip polygon is read from the application database at render time — it is not stored in ArcGIS or blob storage. The scenario's parent project boundary is the clip extent.",
-                  "items": [
-                    "PROJECTS.boundary: GeoJSON polygon drawn by the user when creating the project",
-                    "Passed into the runtime JSON payload at the time of each render",
-                    "Same polygon used for both the clip and the visual project boundary overlay",
-                    "Not pre-baked into any raster — applied fresh every time the map renders"
+                  "tags": [
+                    "RUNS table",
+                    "Tenant schema"
                   ],
-                  "tags": ["PROJECTS.boundary", "Runtime clip source", "GeoJSON polygon"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "process",
-              "label": "ArcGIS",
-              "sublabel": "WRO Service",
-              "steps": [
-                {
+                  "connectors": [
+                    "db-clip-source"
+                  ],
+                  "async": false
+                },
+                "process": {
                   "key": "wro-service",
                   "label": "WRO Service (per state)",
                   "sublabel": "Always running; one per state for defaults",
@@ -1037,10 +1335,86 @@
                     "One service per DOT workspace (per state) for defaults",
                     "Custom layer uploads trigger creation of additional WRO services"
                   ],
-                  "tags": ["ArcGIS WRO Service", "Always-on", "Per-state"],
-                  "connectors": ["wro-runtime"]
+                  "tags": [
+                    "ArcGIS WRO Service",
+                    "Always-on",
+                    "Per-state"
+                  ],
+                  "connectors": [
+                    "wro-runtime"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_1",
+              "cells": {
+                "user": {
+                  "key": "run-complete",
+                  "label": "Results Displayed",
+                  "sublabel": "Suitability map rendered in viewer",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "When the GP job finishes, the run record is updated and the user is notified.",
+                  "items": [
+                    "RUNS.status → complete",
+                    "Notification shown in dashboard",
+                    "Result rasters available in map viewer",
+                    "Run duration and job_id recorded for audit"
+                  ],
+                  "tags": [
+                    "RUNS status: complete",
+                    "Notification"
+                  ],
+                  "connectors": [],
+                  "async": false
                 },
-                {
+                "api": {
+                  "key": "api-run-build-json",
+                  "label": "Build Runtime JSON",
+                  "sublabel": "weight_config + clip polygon from scenario",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "The API reads the scenario's weight config and project boundary polygon, then builds the JSON payload that will be applied to the WRO service portal item at render time.",
+                  "items": [
+                    "weight_config: from SCENARIOS.weight_config",
+                    "clip_polygon: from PROJECTS.boundary (the study area the user drew)",
+                    "Clip is at the SCENARIO level — same clip drives both analysis and visualization",
+                    "JSON structure matches what ArcGIS portal item accepts for runtime overrides"
+                  ],
+                  "tags": [
+                    "Runtime JSON",
+                    "weight_config + clip_polygon",
+                    "Scenario-level clip"
+                  ],
+                  "connectors": [
+                    "api-run-submit"
+                  ],
+                  "async": false
+                },
+                "data": {
+                  "key": "db-clip-source",
+                  "label": "Clip Source: SCENARIOS",
+                  "sublabel": "Boundary polygon read from scenario at render time",
+                  "badge": "PostgreSQL – Tenant Schema",
+                  "badgeColor": "#b45309",
+                  "desc": "The clip polygon is read from the application database at render time — it is not stored in ArcGIS or blob storage. The scenario's parent project boundary is the clip extent.",
+                  "items": [
+                    "PROJECTS.boundary: GeoJSON polygon drawn by the user when creating the project",
+                    "Passed into the runtime JSON payload at the time of each render",
+                    "Same polygon used for both the clip and the visual project boundary overlay",
+                    "Not pre-baked into any raster — applied fresh every time the map renders"
+                  ],
+                  "tags": [
+                    "PROJECTS.boundary",
+                    "Runtime clip source",
+                    "GeoJSON polygon"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "process": {
                   "key": "wro-runtime",
                   "label": "Apply Runtime JSON",
                   "sublabel": "Weights + clip polygon applied on the fly",
@@ -1053,10 +1427,47 @@
                     "User sees the result clipped to their study area, but the source raster is unchanged",
                     "Multiple users can query the same service simultaneously with different clip/weight params"
                   ],
-                  "tags": ["Portal item JSON override", "On-the-fly clip", "Runtime weight application"],
-                  "connectors": ["wro-render"]
+                  "tags": [
+                    "Portal item JSON override",
+                    "On-the-fly clip",
+                    "Runtime weight application"
+                  ],
+                  "connectors": [
+                    "wro-render"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_2",
+              "cells": {
+                "user": null,
+                "api": {
+                  "key": "api-run-submit",
+                  "label": "Apply JSON to WRO Service",
+                  "sublabel": "Patch portal item with clip + weights",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "The .NET API patches the ArcGIS Portal item for the state's WRO service with the runtime JSON payload. This sets the clip and weights for this render without a separate GP job.",
+                  "items": [
+                    "PATCH to ArcGIS Portal item for the state's WRO service",
+                    "Payload: { clip_polygon: <GeoJSON>, weights: <weight_config> }",
+                    "No job_id returned — this is synchronous portal item update",
+                    "WRO service immediately reflects new clip + weights on next tile request"
+                  ],
+                  "tags": [
+                    "ArcGIS Portal item PATCH",
+                    "Runtime JSON",
+                    "No GP job needed"
+                  ],
+                  "connectors": [
+                    "api-run-finish"
+                  ],
+                  "async": false
                 },
-                {
+                "data": null,
+                "process": {
                   "key": "wro-render",
                   "label": "Render Suitability Map",
                   "sublabel": "User sees clipped result — no raster stored per run",
@@ -1069,10 +1480,44 @@
                     "No per-run raster stored — the render is on-demand each time the map loads",
                     "Whether scored outputs are persisted for export is TBD (flagged in architecture meeting)"
                   ],
-                  "tags": ["On-demand render", "Map tiles", "TBD: persist output?"],
-                  "connectors": []
+                  "tags": [
+                    "On-demand render",
+                    "Map tiles",
+                    "TBD: persist output?"
+                  ],
+                  "connectors": [],
+                  "async": false
                 }
-              ]
+              }
+            },
+            {
+              "id": "col_3",
+              "cells": {
+                "user": null,
+                "api": {
+                  "key": "api-run-finish",
+                  "label": "Run → Complete",
+                  "sublabel": "RUNS record updated; result URL returned",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "After the WRO portal item is updated, the API marks the run complete and returns the service URL for display in the frontend.",
+                  "items": [
+                    "RUNS.status → complete",
+                    "Returns WRO service URL (scoped to tenant) to the React frontend",
+                    "No blob result path — output is a live service render, not a stored file",
+                    "TBD: whether a snapshot/export is stored to blob for download"
+                  ],
+                  "tags": [
+                    "RUNS.status: complete",
+                    "WRO service URL",
+                    "Export TBD"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "data": null,
+                "process": null
+              }
             }
           ]
         }
@@ -1090,9 +1535,29 @@
             {
               "id": "user",
               "label": "DOT User",
-              "sublabel": "",
-              "steps": [
-                {
+              "sublabel": ""
+            },
+            {
+              "id": "api",
+              "label": ".NET API",
+              "sublabel": "React Frontend"
+            },
+            {
+              "id": "data",
+              "label": "Azure Blob",
+              "sublabel": "Shared Bucket"
+            },
+            {
+              "id": "process",
+              "label": "ArcGIS",
+              "sublabel": "Image Service"
+            }
+          ],
+          "columns": [
+            {
+              "id": "col_0",
+              "cells": {
+                "user": {
                   "key": "results-open",
                   "label": "Open Run Results",
                   "sublabel": "Click run in dashboard",
@@ -1105,49 +1570,16 @@
                     "Suitability color ramp applied (1 = unsuitable, 9 = highly suitable)",
                     "Project boundary polygon shown as reference"
                   ],
-                  "tags": ["ArcGIS Maps SDK", "ImageryLayer"],
-                  "connectors": ["results-compare"]
-                },
-                {
-                  "key": "results-compare",
-                  "label": "Compare Scenarios",
-                  "sublabel": "Toggle / side-by-side suitability maps",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "Multiple scenario runs can be compared in the same map view.",
-                  "items": [
-                    "Toggle between scenario results in the same map extent",
-                    "Summary stats panel shows score distributions side-by-side",
-                    "Useful for comparing different weight configurations",
-                    "Swipe comparison widget (TBD)"
+                  "tags": [
+                    "ArcGIS Maps SDK",
+                    "ImageryLayer"
                   ],
-                  "tags": ["React map viewer", "ArcGIS Maps SDK swipe widget (TBD)"],
-                  "connectors": ["results-export"]
-                },
-                {
-                  "key": "results-export",
-                  "label": "Export / Share",
-                  "sublabel": "Download rasters or share link",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "Users can download results or share a link to a specific run.",
-                  "items": [
-                    "Download: signed blob URL for raster outputs",
-                    "Share: permalink to run (requires auth on recipient side)",
-                    "Export formats: TBD — likely GeoTIFF + GeoJSON for corridors",
-                    "PDF map export via ArcGIS Maps SDK PrintTask (TBD)"
+                  "connectors": [
+                    "results-compare"
                   ],
-                  "tags": ["SAS blob URL", "PrintTask TBD", "Export formats TBD"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "api",
-              "label": ".NET API",
-              "sublabel": "React Frontend",
-              "steps": [
-                {
+                  "async": false
+                },
+                "api": {
                   "key": "api-results-fetch",
                   "label": "Fetch Run Metadata",
                   "sublabel": "RUNS record + signed blob URLs",
@@ -1160,33 +1592,17 @@
                     "Validates user is authorized for this workspace",
                     "Blob URLs passed to React for map layer loading"
                   ],
-                  "tags": ["SAS token generation", "RUNS table", "Authorization check"],
-                  "connectors": ["api-map-render"]
-                },
-                {
-                  "key": "api-map-render",
-                  "label": "Render in Map Viewer",
-                  "sublabel": "ArcGIS Maps SDK loads result rasters",
-                  "badge": "Frontend",
-                  "badgeColor": "#7c3aed",
-                  "desc": "React uses ArcGIS Maps SDK to load the result raster as a map layer from the signed blob URL.",
-                  "items": [
-                    "ImageryLayer pointed at signed URL or Image Service endpoint",
-                    "Suitability color ramp symbolization applied",
-                    "User can adjust opacity, toggle layers",
-                    "Project boundary drawn as GraphicsLayer"
+                  "tags": [
+                    "SAS token generation",
+                    "RUNS table",
+                    "Authorization check"
                   ],
-                  "tags": ["ArcGIS Maps SDK 4.x", "ImageryLayer", "GraphicsLayer"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "data",
-              "label": "Azure Blob",
-              "sublabel": "Shared Bucket",
-              "steps": [
-                {
+                  "connectors": [
+                    "api-map-render"
+                  ],
+                  "async": false
+                },
+                "data": {
                   "key": "blob-serve",
                   "label": "Serve Result Rasters",
                   "sublabel": "SAS token, scoped to tenant path",
@@ -1199,17 +1615,15 @@
                     "Tenant-scoped path: imagery/{state_code}/runs/",
                     "All access brokered by API — no public URLs"
                   ],
-                  "tags": ["Azure SAS Token", "Private blob access", "Shared bucket"],
-                  "connectors": []
-                }
-              ]
-            },
-            {
-              "id": "process",
-              "label": "ArcGIS",
-              "sublabel": "Image Service",
-              "steps": [
-                {
+                  "tags": [
+                    "Azure SAS Token",
+                    "Private blob access",
+                    "Shared bucket"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "process": {
                   "key": "image-service",
                   "label": "Image Service",
                   "sublabel": "Serves mosaic dataset tiles to React map",
@@ -1222,10 +1636,94 @@
                     "Serves tiles to the React map viewer on demand",
                     "Access proxied through .NET API — users never call Image Service directly"
                   ],
-                  "tags": ["ArcGIS Image Server", "Mosaic Dataset", "Shared Blob bucket as source"],
-                  "connectors": []
+                  "tags": [
+                    "ArcGIS Image Server",
+                    "Mosaic Dataset",
+                    "Shared Blob bucket as source"
+                  ],
+                  "connectors": [],
+                  "async": false
                 }
-              ]
+              }
+            },
+            {
+              "id": "col_1",
+              "cells": {
+                "user": {
+                  "key": "results-compare",
+                  "label": "Compare Scenarios",
+                  "sublabel": "Toggle / side-by-side suitability maps",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "Multiple scenario runs can be compared in the same map view.",
+                  "items": [
+                    "Toggle between scenario results in the same map extent",
+                    "Summary stats panel shows score distributions side-by-side",
+                    "Useful for comparing different weight configurations",
+                    "Swipe comparison widget (TBD)"
+                  ],
+                  "tags": [
+                    "React map viewer",
+                    "ArcGIS Maps SDK swipe widget (TBD)"
+                  ],
+                  "connectors": [
+                    "results-export"
+                  ],
+                  "async": false
+                },
+                "api": {
+                  "key": "api-map-render",
+                  "label": "Render in Map Viewer",
+                  "sublabel": "ArcGIS Maps SDK loads result rasters",
+                  "badge": "Frontend",
+                  "badgeColor": "#7c3aed",
+                  "desc": "React uses ArcGIS Maps SDK to load the result raster as a map layer from the signed blob URL.",
+                  "items": [
+                    "ImageryLayer pointed at signed URL or Image Service endpoint",
+                    "Suitability color ramp symbolization applied",
+                    "User can adjust opacity, toggle layers",
+                    "Project boundary drawn as GraphicsLayer"
+                  ],
+                  "tags": [
+                    "ArcGIS Maps SDK 4.x",
+                    "ImageryLayer",
+                    "GraphicsLayer"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "data": null,
+                "process": null
+              }
+            },
+            {
+              "id": "col_2",
+              "cells": {
+                "user": {
+                  "key": "results-export",
+                  "label": "Export / Share",
+                  "sublabel": "Download rasters or share link",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "Users can download results or share a link to a specific run.",
+                  "items": [
+                    "Download: signed blob URL for raster outputs",
+                    "Share: permalink to run (requires auth on recipient side)",
+                    "Export formats: TBD — likely GeoTIFF + GeoJSON for corridors",
+                    "PDF map export via ArcGIS Maps SDK PrintTask (TBD)"
+                  ],
+                  "tags": [
+                    "SAS blob URL",
+                    "PrintTask TBD",
+                    "Export formats TBD"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "api": null,
+                "data": null,
+                "process": null
+              }
             }
           ]
         }
