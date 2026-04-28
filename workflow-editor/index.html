@@ -111,14 +111,20 @@ body { font-family: var(--font); font-size: 13px; color: var(--text); display: f
 .lane-label .lname { font-size: 11.5px; font-weight: 700; }
 .lane-label .lsub { font-size: 10.5px; font-weight: 400; opacity: 0.65; margin-top: 2px; }
 .lane-body {
-  flex: 1; padding: 16px 20px; display: flex; align-items: center;
+  flex: 1; padding: 24px 20px 16px 20px; display: flex; align-items: center;
   flex-wrap: nowrap; gap: 0; overflow-x: auto;
 }
 
 /* ── Steps ── */
+.step-cell {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 190px; width: 190px; flex-shrink: 0; gap: 4px;
+}
+.step-cell.placeholder { visibility: hidden; }
+.step-cell.placeholder.edit-visible { visibility: visible; }
 .step {
   background: white; border: 2px solid; border-radius: 8px;
-  padding: 9px 13px; min-width: 148px; max-width: 190px;
+  padding: 9px 13px; width: 100%;
   text-align: center; cursor: pointer; flex-shrink: 0;
   transition: box-shadow 0.15s, transform 0.15s, outline 0.1s;
   position: relative;
@@ -129,14 +135,23 @@ body { font-family: var(--font); font-size: 13px; color: var(--text); display: f
 .stitle { font-size: 11.5px; font-weight: 700; line-height: 1.3; }
 .ssub { font-size: 10.5px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
 .arrow { width: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
-.add-step-btn {
-  background: rgba(255,255,255,0.8); border: 2px dashed #cbd5e1; border-radius: 8px;
-  padding: 8px 12px; cursor: pointer; font-size: 11px; font-weight: 600;
-  color: #94a3b8; white-space: nowrap; flex-shrink: 0;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-  font-family: var(--font);
+
+/* ── Insert / fill buttons ── */
+.insert-btns { display: flex; gap: 3px; justify-content: center; }
+.insert-btn {
+  background: rgba(255,255,255,0.85); border: 1px solid #cbd5e1; border-radius: 3px;
+  padding: 2px 5px; cursor: pointer; font-size: 9px; font-weight: 600;
+  color: #64748b; white-space: nowrap; transition: border-color 0.15s, color 0.15s;
+  font-family: var(--font); line-height: 1.4;
 }
-.add-step-btn:hover { border-color: #FFC107; color: #92400e; background: #fffbeb; }
+.insert-btn:hover { border-color: var(--cgs-blue); color: var(--cgs-blue); }
+.fill-btn {
+  background: rgba(255,255,255,0.8); border: 2px dashed #cbd5e1; border-radius: 8px;
+  padding: 8px 12px; cursor: pointer; font-size: 14px; font-weight: 700;
+  color: #94a3b8; transition: border-color 0.15s, color 0.15s, background 0.15s;
+  font-family: var(--font); width: 100%;
+}
+.fill-btn:hover { border-color: #FFC107; color: #92400e; background: #fffbeb; }
 
 /* Lane colors */
 .lane-admin .lane-label { background: var(--admin-bg); color: var(--admin-color); }
@@ -331,17 +346,22 @@ async function saveToGitHub(model, pat) {
   if (!putRes.ok) { const err = await putRes.json(); throw new Error(err.message || 'GitHub API error'); }
 }
 
-// ── Model mutation helpers ──────────────────────────────────────
-function updatePhases(model, phaseIdx, flowIdx, laneIdx, fn) {
+// ── Model mutation helpers ──
+function updateColumns(model, phaseIdx, flowIdx, fn) {
   return {
     ...model,
     phases: model.phases.map((ph, pi) => pi !== phaseIdx ? ph : {
       ...ph,
-      flows: ph.flows.map((fl, fi) => fi !== flowIdx ? fl : {
-        ...fl,
-        lanes: fl.lanes.map((ln, li) => li !== laneIdx ? ln : fn(ln))
-      })
+      flows: ph.flows.map((fl, fi) => fi !== flowIdx ? fl : { ...fl, columns: fn(fl.columns) })
     })
+  };
+}
+
+function blankStep() {
+  return {
+    key: 'step_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+    label: 'New Step', sublabel: '', badge: 'Badge',
+    badgeColor: '#64748b', desc: '', items: [], tags: [], async: false
   };
 }
 
@@ -352,7 +372,7 @@ function App() {
   const [activePhase, setActivePhase] = useState(0);
   const [editMode,    setEditMode]    = useState(false);
   const [detailStep,  setDetailStep]  = useState(null);
-  const [editCtx,     setEditCtx]     = useState(null); // {phaseIdx,flowIdx,laneIdx,stepIdx}
+  const [editCtx,     setEditCtx]     = useState(null); // {phaseIdx,flowIdx,colIdx,laneId}
   const [saved,       setSaved]       = useState(true);
   const [pat,         setPat]         = useState(() => localStorage.getItem(PAT_KEY) || '');
   const [showPat,     setShowPat]     = useState(false);
@@ -363,7 +383,6 @@ function App() {
   const [newTagVal,   setNewTagVal]   = useState('');
   const [newItemVal,  setNewItemVal]  = useState('');
 
-  // Load on mount: localStorage → working.json → default.json
   useEffect(() => {
     (async () => {
       try {
@@ -374,7 +393,6 @@ function App() {
     })();
   }, []);
 
-  // Auto-save to localStorage every 600ms
   useEffect(() => {
     if (!model) return;
     setSaved(false);
@@ -385,22 +403,22 @@ function App() {
     return () => clearTimeout(t);
   }, [model]);
 
-  // Derive editing step from model + editCtx
+  // Derive editing cell from model + editCtx
   const editingStep = editCtx && model
-    ? model.phases[editCtx.phaseIdx]?.flows[editCtx.flowIdx]?.lanes[editCtx.laneIdx]?.steps[editCtx.stepIdx]
+    ? (model.phases[editCtx.phaseIdx]?.flows[editCtx.flowIdx]?.columns[editCtx.colIdx]?.cells[editCtx.laneId] ?? null)
     : null;
 
-  // Update a field on the currently-editing step
   const updateEditField = useCallback((field, value) => {
     if (!editCtx) return;
-    const { phaseIdx, flowIdx, laneIdx, stepIdx } = editCtx;
-    setModel(m => updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({
-      ...ln,
-      steps: ln.steps.map((s, si) => si !== stepIdx ? s : { ...s, [field]: value })
-    })));
+    const { phaseIdx, flowIdx, colIdx, laneId } = editCtx;
+    setModel(m => updateColumns(m, phaseIdx, flowIdx, cols =>
+      cols.map((col, ci) => ci !== colIdx ? col : {
+        ...col,
+        cells: { ...col.cells, [laneId]: { ...col.cells[laneId], [field]: value } }
+      })
+    ));
   }, [editCtx]);
 
-  // Update a list item within step
   const updateListItem = useCallback((field, idx, value) => {
     if (!editCtx || !editingStep) return;
     const arr = [...(editingStep[field] || [])];
@@ -427,63 +445,74 @@ function App() {
     updateEditField(field, arr);
   }, [editCtx, editingStep, updateEditField]);
 
-  const moveStep = useCallback((dir) => {
+  // Move entire column left/right
+  const moveColumn = useCallback((dir) => {
     if (!editCtx) return;
-    const { phaseIdx, flowIdx, laneIdx, stepIdx } = editCtx;
-    const newIdx = stepIdx + dir;
-    setModel(m => {
-      const lane = m.phases[phaseIdx].flows[flowIdx].lanes[laneIdx];
-      if (newIdx < 0 || newIdx >= lane.steps.length) return m;
-      const steps = [...lane.steps];
-      [steps[stepIdx], steps[newIdx]] = [steps[newIdx], steps[stepIdx]];
-      return updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({ ...ln, steps }));
-    });
-    setEditCtx(c => ({ ...c, stepIdx: c.stepIdx + dir }));
+    const { phaseIdx, flowIdx, colIdx } = editCtx;
+    setModel(m => updateColumns(m, phaseIdx, flowIdx, cols => {
+      const newIdx = colIdx + dir;
+      if (newIdx < 0 || newIdx >= cols.length) return cols;
+      const arr = [...cols];
+      [arr[colIdx], arr[newIdx]] = [arr[newIdx], arr[colIdx]];
+      return arr;
+    }));
+    setEditCtx(c => ({ ...c, colIdx: c.colIdx + dir }));
   }, [editCtx]);
 
+  // Delete step — nullify cell; remove column if all cells null
   const deleteStep = useCallback(() => {
     if (!editCtx) return;
     if (!window.confirm('Delete this step?')) return;
-    const { phaseIdx, flowIdx, laneIdx, stepIdx } = editCtx;
-    setModel(m => updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({
-      ...ln, steps: ln.steps.filter((_, si) => si !== stepIdx)
-    })));
+    const { phaseIdx, flowIdx, colIdx, laneId } = editCtx;
+    setModel(m => updateColumns(m, phaseIdx, flowIdx, cols => {
+      const newCols = cols.map((col, ci) => ci !== colIdx ? col : {
+        ...col, cells: { ...col.cells, [laneId]: null }
+      });
+      const allNull = Object.values(newCols[colIdx].cells).every(c => c === null);
+      return allNull ? newCols.filter((_, ci) => ci !== colIdx) : newCols;
+    }));
     setEditCtx(null);
   }, [editCtx]);
 
-  const addStep = useCallback((phaseIdx, flowIdx, laneIdx) => {
+  // Insert a new column before or after colIdx; only laneId gets a step
+  const insertColumn = useCallback((phaseIdx, flowIdx, colIdx, laneId, after) => {
     setModel(m => {
-      const lane = m.phases[phaseIdx].flows[flowIdx].lanes[laneIdx];
-      const newStep = {
-        key: 'step_' + Date.now(),
-        label: 'New Step',
-        sublabel: '',
-        badge: 'Badge',
-        badgeColor: '#64748b',
-        desc: '',
-        items: [],
-        tags: [],
-        connectors: []
-      };
-      const newIdx = lane.steps.length;
-      // schedule editCtx update after model settles
+      const flow = m.phases[phaseIdx].flows[flowIdx];
+      const laneIds = flow.lanes.map(l => l.id);
+      const step = blankStep();
+      const cells = Object.fromEntries(laneIds.map(id => [id, id === laneId ? step : null]));
+      const newCol = { id: 'col_' + Date.now(), cells };
+      const insertAt = after ? colIdx + 1 : colIdx;
+      const newCols = [...flow.columns];
+      newCols.splice(insertAt, 0, newCol);
       setTimeout(() => {
-        setEditCtx({ phaseIdx, flowIdx, laneIdx, stepIdx: newIdx });
+        setEditCtx({ phaseIdx, flowIdx, colIdx: insertAt, laneId });
         setNewTagVal(''); setNewItemVal('');
       }, 0);
-      return updatePhases(m, phaseIdx, flowIdx, laneIdx, ln => ({
-        ...ln, steps: [...ln.steps, newStep]
-      }));
+      return updateColumns(m, phaseIdx, flowIdx, () => newCols);
     });
   }, []);
 
-  const handleStepClick = useCallback((phaseIdx, flowIdx, laneIdx, stepIdx, step) => {
+  // Fill an existing null cell with a blank step
+  const fillCell = useCallback((phaseIdx, flowIdx, colIdx, laneId) => {
+    const step = blankStep();
+    setModel(m => updateColumns(m, phaseIdx, flowIdx, cols =>
+      cols.map((col, ci) => ci !== colIdx ? col : {
+        ...col, cells: { ...col.cells, [laneId]: step }
+      })
+    ));
+    setTimeout(() => {
+      setEditCtx({ phaseIdx, flowIdx, colIdx, laneId });
+      setNewTagVal(''); setNewItemVal('');
+    }, 0);
+  }, []);
+
+  const handleStepClick = useCallback((phaseIdx, flowIdx, colIdx, laneId, cell) => {
     if (editMode) {
-      setEditCtx({ phaseIdx, flowIdx, laneIdx, stepIdx });
-      setNewTagVal('');
-      setNewItemVal('');
+      setEditCtx({ phaseIdx, flowIdx, colIdx, laneId });
+      setNewTagVal(''); setNewItemVal('');
     } else {
-      setDetailStep(step);
+      setDetailStep(cell);
     }
   }, [editMode]);
 
@@ -534,45 +563,77 @@ function App() {
   const laneCount = phase ? phase.flows.reduce((s, f) => s + f.lanes.length, 0) : 0;
 
   // ── Render helpers ──
-  const renderStep = (step, phaseIdx, flowIdx, laneIdx, stepIdx, laneId) => {
+
+  const renderStep = (cell, phaseIdx, flowIdx, colIdx, laneId, colCount) => {
     const isSelected = editCtx &&
       editCtx.phaseIdx === phaseIdx && editCtx.flowIdx === flowIdx &&
-      editCtx.laneIdx === laneIdx && editCtx.stepIdx === stepIdx;
-    return e('div', {
-      key: step.key || stepIdx,
-      className: `step${isSelected ? ' step-selected' : ''}${editMode ? ' edit-mode-active' : ''}`,
-      title: editMode ? 'Click to edit' : step.sublabel || '',
-      onClick: () => handleStepClick(phaseIdx, flowIdx, laneIdx, stepIdx, step)
-    },
-      e('div', { className: 'stitle' }, step.label),
-      step.sublabel && e('div', { className: 'ssub' }, step.sublabel)
+      editCtx.colIdx === colIdx && editCtx.laneId === laneId;
+
+    return e('div', { key: cell.key || `${colIdx}-${laneId}`, className: 'step-cell' },
+      editMode && e('div', { className: 'insert-btns' },
+        e('button', {
+          className: 'insert-btn',
+          title: 'Insert column before this step',
+          onClick: ev => { ev.stopPropagation(); insertColumn(phaseIdx, flowIdx, colIdx, laneId, false); }
+        }, '← Before'),
+        e('button', {
+          className: 'insert-btn',
+          title: 'Insert column after this step',
+          onClick: ev => { ev.stopPropagation(); insertColumn(phaseIdx, flowIdx, colIdx, laneId, true); }
+        }, 'After →')
+      ),
+      e('div', {
+        className: `step${isSelected ? ' step-selected' : ''}${editMode ? ' edit-mode-active' : ''}`,
+        title: editMode ? 'Click to edit' : cell.sublabel || '',
+        onClick: () => handleStepClick(phaseIdx, flowIdx, colIdx, laneId, cell)
+      },
+        e('div', { className: 'stitle' }, cell.label),
+        cell.sublabel && e('div', { className: 'ssub' }, cell.sublabel)
+      )
     );
   };
 
-  const renderLane = (lane, phaseIdx, flowIdx, laneIdx) => {
+  const renderLane = (lane, phaseIdx, flowIdx, columns) => {
     const lc = LANE_COLORS[lane.id] || { color: '#64748b', bg: '#f8fafc' };
     return e('div', { key: lane.id, className: `swimlane-row lane-${lane.id}` },
-      e('div', {
-        className: 'lane-label',
-        style: { background: lc.bg, color: lc.color }
-      },
+      e('div', { className: 'lane-label', style: { background: lc.bg, color: lc.color } },
         e('div', { className: 'lname' }, lane.label),
         lane.sublabel && e('div', { className: 'lsub' }, lane.sublabel)
       ),
       e('div', { className: 'lane-body' },
-        ...lane.steps.flatMap((step, stepIdx) => {
+        ...columns.flatMap((col, colIdx) => {
+          const cell = col.cells[lane.id];
           const nodes = [];
-          if (stepIdx > 0) nodes.push(e('div', { key: `arr-${stepIdx}`, className: 'arrow' }, '→'));
-          nodes.push(renderStep(step, phaseIdx, flowIdx, laneIdx, stepIdx, lane.id));
+
+          // Arrow between columns — hidden if both this and previous cell are null
+          if (colIdx > 0) {
+            const prevCell = columns[colIdx - 1].cells[lane.id];
+            const visible = cell !== null || prevCell !== null;
+            nodes.push(e('div', {
+              key: `arr-${colIdx}`,
+              className: 'arrow',
+              style: visible ? {} : { visibility: 'hidden' }
+            }, '→'));
+          }
+
+          // Step or placeholder
+          if (cell != null) {
+            nodes.push(renderStep(cell, phaseIdx, flowIdx, colIdx, lane.id, columns.length));
+          } else {
+            nodes.push(e('div', {
+              key: `ph-${colIdx}`,
+              className: `step-cell placeholder${editMode ? ' edit-visible' : ''}`
+            },
+              editMode && e('button', {
+                className: 'fill-btn',
+                title: 'Add step here',
+                onClick: () => fillCell(phaseIdx, flowIdx, colIdx, lane.id)
+              }, '+')
+            ));
+          }
+
           return nodes;
-        }),
-        editMode && e('div', { key: 'add-wrap', style: { display: 'flex', alignItems: 'center', marginLeft: lane.steps.length > 0 ? 0 : 0 } },
-          lane.steps.length > 0 && e('div', { className: 'arrow', style: { color: '#cbd5e1' } }, '→'),
-          e('button', {
-            className: 'add-step-btn',
-            onClick: () => addStep(phaseIdx, flowIdx, laneIdx)
-          }, '+ Step')
-        )
+        })
       )
     );
   };
@@ -590,7 +651,7 @@ function App() {
         className: 'swimlane-wrap',
         style: { marginBottom: isLast ? 0 : 16 }
       },
-        flow.lanes.map((lane, laneIdx) => renderLane(lane, phaseIdx, flowIdx, laneIdx))
+        flow.lanes.map(lane => renderLane(lane, phaseIdx, flowIdx, flow.columns))
       )
     );
   };
@@ -599,8 +660,8 @@ function App() {
   const renderEditPanel = () => {
     if (!editCtx || !editingStep) return null;
     const step = editingStep;
-    const laneData = model.phases[editCtx.phaseIdx]?.flows[editCtx.flowIdx]?.lanes[editCtx.laneIdx];
-    const stepCount = laneData ? laneData.steps.length : 0;
+    const flow = model.phases[editCtx.phaseIdx]?.flows[editCtx.flowIdx];
+    const colCount = flow ? flow.columns.length : 0;
 
     return e('div', { className: 'side-panel' },
       e('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
@@ -670,18 +731,18 @@ function App() {
       ),
 
       e('div', { style: { borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8 } }),
-      e('div', { className: 'panel-label' }, 'Position in Lane'),
+      e('div', { className: 'panel-label' }, 'Column Position'),
       e('div', { style: { display: 'flex', gap: 4 } },
         e('button', {
           className: 'action-btn', style: { background: '#7c3aed' },
-          disabled: editCtx.stepIdx === 0,
-          onClick: () => moveStep(-1)
-        }, '▲ Up'),
+          disabled: editCtx.colIdx === 0,
+          onClick: () => moveColumn(-1)
+        }, '◀ Left'),
         e('button', {
           className: 'action-btn', style: { background: '#7c3aed' },
-          disabled: editCtx.stepIdx >= stepCount - 1,
-          onClick: () => moveStep(1)
-        }, '▼ Down')
+          disabled: editCtx.colIdx >= colCount - 1,
+          onClick: () => moveColumn(1)
+        }, 'Right ▶')
       ),
       e('button', {
         className: 'action-btn', style: { background: '#cc3300', marginTop: 6 },
@@ -783,7 +844,7 @@ function App() {
       !pat && ghStatus !== 'error' && e('span', { style: { color: '#f59e0b', marginLeft: 8 } }, '· Set a GitHub token (🔑) to save to the repo'),
       e('span', { style: { marginLeft: 'auto' } },
         editMode
-          ? (editCtx ? `Editing step — ${laneCount} lane(s) in this phase` : 'Edit mode — click a step to edit')
+          ? (editCtx ? `Editing · col ${editCtx.colIdx + 1} · ${editCtx.laneId} lane` : 'Edit mode — click a step to edit, + to fill empty cell')
           : 'Click a step for details · Use Edit Mode to modify'
       )
     ),
