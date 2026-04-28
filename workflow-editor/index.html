@@ -694,8 +694,8 @@ function App() {
     const lanes   = flow.lanes   || [];
     const columns = flow.columns || [];
 
-    const COL_W = 220, ROW_H = 110, NODE_W = 172, NODE_H = 68;
-    const LEFT_PAD = 140, TOP_PAD = 24, BOT_PAD = 28, RIGHT_PAD = 24;
+    const COL_W = 226, ROW_H = 120, NODE_W = 174, NODE_H = 76;
+    const LEFT_PAD = 148, TOP_PAD = 26, BOT_PAD = 32, RIGHT_PAD = 24;
     const LINE_H = 15;
 
     const svgW = LEFT_PAD + Math.max(columns.length, 1) * COL_W + RIGHT_PAD;
@@ -714,7 +714,62 @@ function App() {
       return lines.slice(0, 2);
     }
 
-    // node positions
+    // Shape renderer — different symbol per actor/system type
+    function drawShape(key, laneId, cx, cy, w, h, color, isSel, onClick) {
+      const ss = isSel ? '#FFC107' : 'rgba(0,0,0,0.18)';
+      const sw = isSel ? 3 : 1;
+      const sf = { cursor: 'pointer', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.2))' };
+
+      if (laneId === 'data') {
+        // Cylinder: DB / Blob Storage
+        const ry = 11;
+        return [
+          e('rect',    { key:`${key}b`, x:cx-w/2, y:cy-h/2+ry, width:w, height:h-ry, fill:color, stroke:ss, strokeWidth:sw, style:sf, onClick }),
+          e('ellipse', { key:`${key}be`, cx, cy:cy+h/2-ry, rx:w/2-sw/2, ry, fill:color, stroke:ss, strokeWidth:sw }),
+          e('ellipse', { key:`${key}te`, cx, cy:cy-h/2+ry, rx:w/2-sw/2, ry, fill:'rgba(255,255,255,0.2)', stroke:ss, strokeWidth:sw }),
+        ];
+      }
+
+      if (laneId === 'user') {
+        // Browser: URL bar + three window-control dots
+        const chrH = 15;
+        return [
+          e('rect',   { key:`${key}b`, x:cx-w/2, y:cy-h/2, width:w, height:h, rx:8, fill:color, stroke:ss, strokeWidth:sw, style:sf, onClick }),
+          e('rect',   { key:`${key}chr`, x:cx-w/2+sw+1, y:cy-h/2+sw+1, width:w-sw*2-2, height:chrH, rx:6, fill:'rgba(255,255,255,0.22)', style:{pointerEvents:'none'} }),
+          e('circle', { key:`${key}d1`, cx:cx-w/2+11, cy:cy-h/2+chrH/2+sw+1, r:2.5, fill:'rgba(255,255,255,0.65)', style:{pointerEvents:'none'} }),
+          e('circle', { key:`${key}d2`, cx:cx-w/2+18, cy:cy-h/2+chrH/2+sw+1, r:2.5, fill:'rgba(255,255,255,0.65)', style:{pointerEvents:'none'} }),
+          e('circle', { key:`${key}d3`, cx:cx-w/2+25, cy:cy-h/2+chrH/2+sw+1, r:2.5, fill:'rgba(255,255,255,0.65)', style:{pointerEvents:'none'} }),
+          // URL bar
+          e('rect',   { key:`${key}url`, x:cx-w/2+35, y:cy-h/2+chrH/2-4+sw+1, width:w-45-sw, height:8, rx:4, fill:'rgba(255,255,255,0.3)', style:{pointerEvents:'none'} }),
+        ];
+      }
+
+      if (laneId === 'process') {
+        // Server rack
+        return [
+          e('rect', { key:`${key}b`, x:cx-w/2, y:cy-h/2, width:w, height:h, rx:3, fill:color, stroke:ss, strokeWidth:sw, style:sf, onClick }),
+          e('rect', { key:`${key}s1`, x:cx-w/2+8, y:cy-h/2+8,  width:w-16, height:8, rx:2, fill:'rgba(255,255,255,0.18)', style:{pointerEvents:'none'} }),
+          e('rect', { key:`${key}s2`, x:cx-w/2+8, y:cy-h/2+20, width:w-16, height:8, rx:2, fill:'rgba(255,255,255,0.18)', style:{pointerEvents:'none'} }),
+          e('rect', { key:`${key}s3`, x:cx-w/2+8, y:cy-h/2+32, width:w-16, height:8, rx:2, fill:'rgba(255,255,255,0.18)', style:{pointerEvents:'none'} }),
+          e('circle', { key:`${key}led`, cx:cx+w/2-12, cy:cy-h/2+12, r:3.5, fill:'#4ade80', style:{pointerEvents:'none'} }),
+        ];
+      }
+
+      if (laneId === 'api') {
+        // App Service box — accent stripe top
+        return [
+          e('rect', { key:`${key}b`, x:cx-w/2, y:cy-h/2, width:w, height:h, rx:8, fill:color, stroke:ss, strokeWidth:sw, style:sf, onClick }),
+          e('rect', { key:`${key}bar`, x:cx-w/2+2, y:cy-h/2+2, width:w-4, height:6, rx:3, fill:'rgba(255,255,255,0.3)', style:{pointerEvents:'none'} }),
+        ];
+      }
+
+      // admin and default — rounded portal box
+      return [
+        e('rect', { key:`${key}b`, x:cx-w/2, y:cy-h/2, width:w, height:h, rx:10, fill:color, stroke:ss, strokeWidth:sw, style:sf, onClick }),
+      ];
+    }
+
+    // Build node positions
     const nodePos = {};
     lanes.forEach((lane, li) => {
       columns.forEach((col, ci) => {
@@ -727,8 +782,8 @@ function App() {
       });
     });
 
-    // sequential edges: same lane, consecutive non-null columns
-    const seqEdges = [];
+    // Edges
+    const seqEdges = [], trigEdges = [];
     lanes.forEach(lane => {
       let prev = null;
       columns.forEach(col => {
@@ -736,9 +791,6 @@ function App() {
         if (nodePos[k]) { if (prev) seqEdges.push({ from: prev, to: k }); prev = k; }
       });
     });
-
-    // trigger edges: same column, consecutive lanes with steps
-    const trigEdges = [];
     columns.forEach(col => {
       const present = lanes.map(ln => `${ln.id}_${col.id}`).filter(k => nodePos[k]);
       for (let i = 0; i < present.length - 1; i++)
@@ -748,7 +800,6 @@ function App() {
     const mkS = `fcS${phaseIdx}_${flowIdx}`, mkT = `fcT${phaseIdx}_${flowIdx}`;
     const els = [];
 
-    // arrowhead markers
     els.push(e('defs', { key: 'defs' },
       e('marker', { id: mkS, markerWidth: 9, markerHeight: 9, refX: 8, refY: 3.5, orient: 'auto' },
         e('path', { d: 'M0,0 L0,7 L8,3.5 z', fill: '#334155' })),
@@ -756,95 +807,95 @@ function App() {
         e('path', { d: 'M0,0 L0,7 L8,3.5 z', fill: '#94a3b8' }))
     ));
 
-    // SVG background
     els.push(e('rect', { key: 'svgbg', x: 0, y: 0, width: svgW, height: svgH, fill: '#f8fafc' }));
 
-    // lane bands
+    // Lane bands + labels
     lanes.forEach((lane, li) => {
       const lc = LANE_COLORS[lane.id] || { color: '#64748b', bg: '#f8fafc' };
       const y = TOP_PAD + li * ROW_H;
       els.push(
-        e('rect', { key: `bg${li}`, x: 0, y, width: svgW, height: ROW_H, fill: lc.bg, opacity: 0.55 }),
-        e('line', { key: `bd${li}`, x1: 0, y1: y + ROW_H, x2: svgW, y2: y + ROW_H, stroke: '#e2e8f0', strokeWidth: 1 }),
-        e('text', { key: `lt${li}`, x: 12, y: y + ROW_H / 2 - (lane.sublabel ? 7 : 0), dominantBaseline: 'middle', fontSize: 11.5, fontWeight: 700, fill: lc.color, fontFamily: 'inherit' }, lane.label)
+        e('rect', { key:`bg${li}`, x:0, y, width:svgW, height:ROW_H, fill:lc.bg, opacity:0.5 }),
+        e('line', { key:`bd${li}`, x1:0, y1:y+ROW_H, x2:svgW, y2:y+ROW_H, stroke:'#e2e8f0', strokeWidth:1 }),
+        e('text', { key:`lt${li}`, x:12, y:y+ROW_H/2-(lane.sublabel?7:0), dominantBaseline:'middle', fontSize:11.5, fontWeight:700, fill:lc.color, fontFamily:'inherit' }, lane.label)
       );
       if (lane.sublabel) els.push(
-        e('text', { key: `ls${li}`, x: 12, y: y + ROW_H / 2 + 8, dominantBaseline: 'middle', fontSize: 10, fill: lc.color, opacity: 0.7, fontFamily: 'inherit' }, lane.sublabel)
+        e('text', { key:`ls${li}`, x:12, y:y+ROW_H/2+8, dominantBaseline:'middle', fontSize:10, fill:lc.color, opacity:0.7, fontFamily:'inherit' }, lane.sublabel)
       );
     });
 
-    // label divider
-    els.push(e('line', { key: 'sep', x1: LEFT_PAD - 2, y1: 0, x2: LEFT_PAD - 2, y2: svgH, stroke: '#cbd5e1', strokeWidth: 2 }));
+    els.push(e('line', { key:'sep', x1:LEFT_PAD-2, y1:0, x2:LEFT_PAD-2, y2:svgH, stroke:'#cbd5e1', strokeWidth:2 }));
 
-    // sequential arrows — dashed dark
+    // Sequential arrows (dashed dark, left-to-right within a lane)
     seqEdges.forEach((edge, i) => {
       const f = nodePos[edge.from], t = nodePos[edge.to];
       if (!f || !t) return;
       els.push(e('line', {
-        key: `se${i}`,
-        x1: f.cx + NODE_W / 2 + 2, y1: f.cy,
-        x2: t.cx - NODE_W / 2 - 2, y2: t.cy,
-        stroke: '#334155', strokeWidth: 1.5, strokeDasharray: '7,4',
-        markerEnd: `url(#${mkS})`
+        key:`se${i}`, x1:f.cx+NODE_W/2+2, y1:f.cy, x2:t.cx-NODE_W/2-2, y2:t.cy,
+        stroke:'#334155', strokeWidth:1.5, strokeDasharray:'7,4', markerEnd:`url(#${mkS})`
       }));
     });
 
-    // trigger arrows — short dashed gray (same column, cross-lane)
+    // Trigger arrows (dashed gray, same column cross-lane)
     trigEdges.forEach((edge, i) => {
       const f = nodePos[edge.from], t = nodePos[edge.to];
       if (!f || !t) return;
       els.push(e('line', {
-        key: `te${i}`,
-        x1: f.cx, y1: f.cy + NODE_H / 2 + 3,
-        x2: t.cx, y2: t.cy - NODE_H / 2 - 3,
-        stroke: '#94a3b8', strokeWidth: 1.5, strokeDasharray: '4,3',
-        markerEnd: `url(#${mkT})`
+        key:`te${i}`, x1:f.cx, y1:f.cy+NODE_H/2+3, x2:t.cx, y2:t.cy-NODE_H/2-3,
+        stroke:'#94a3b8', strokeWidth:1.5, strokeDasharray:'4,3', markerEnd:`url(#${mkT})`
       }));
     });
 
-    // nodes — filled with lane color, white text
+    // Render nodes with proper shapes, white text, step-number badge
     Object.entries(nodePos).forEach(([key, np]) => {
       const { cx, cy, step, colIdx, laneId } = np;
       const lc = LANE_COLORS[laneId] || { color: '#64748b', bg: '#f8fafc' };
-      const ll = wrapText(step.label || '', 22);
-      const sl = step.sublabel ? wrapText(step.sublabel, 27) : [];
-      const total = ll.length + sl.length;
-      const startY = cy - ((total - 1) * LINE_H) / 2;
       const isSel = editCtx &&
         editCtx.phaseIdx === phaseIdx && editCtx.flowIdx === flowIdx &&
         editCtx.colIdx === colIdx && editCtx.laneId === laneId;
 
-      els.push(e('rect', {
-        key: `r${key}`,
-        x: cx - NODE_W / 2, y: cy - NODE_H / 2,
-        width: NODE_W, height: NODE_H, rx: 10,
-        fill: lc.color,
-        stroke: isSel ? '#FFC107' : 'rgba(0,0,0,0.12)',
-        strokeWidth: isSel ? 3 : 1,
-        style: { cursor: 'pointer', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))' },
-        onClick: () => handleStepClick(phaseIdx, flowIdx, colIdx, laneId, step)
-      }));
+      // Shape elements
+      drawShape(key, laneId, cx, cy, NODE_W, NODE_H, lc.color, isSel,
+        () => handleStepClick(phaseIdx, flowIdx, colIdx, laneId, step)
+      ).forEach(el => els.push(el));
+
+      // Text — offset down inside cylinder/browser chrome
+      const textCY = (laneId === 'data')  ? cy + 6 :
+                     (laneId === 'user')   ? cy + 8 :
+                     (laneId === 'process')? cy + 8 : cy;
+      const ll = wrapText(step.label || '', 21);
+      const sl = step.sublabel ? wrapText(step.sublabel, 26) : [];
+      const total = ll.length + sl.length;
+      const startY = textCY - ((total - 1) * LINE_H) / 2;
       ll.forEach((ln, li) => els.push(e('text', {
-        key: `tl${key}_${li}`, x: cx, y: startY + li * LINE_H,
-        textAnchor: 'middle', dominantBaseline: 'middle',
-        fontSize: 11.5, fontWeight: 700, fill: 'white', fontFamily: 'inherit',
-        style: { pointerEvents: 'none' }
+        key:`tl${key}_${li}`, x:cx, y:startY+li*LINE_H,
+        textAnchor:'middle', dominantBaseline:'middle',
+        fontSize:11.5, fontWeight:700, fill:'white', fontFamily:'inherit',
+        style:{pointerEvents:'none'}
       }, ln)));
       sl.forEach((ln, li) => els.push(e('text', {
-        key: `ts${key}_${li}`, x: cx, y: startY + (ll.length + li) * LINE_H,
-        textAnchor: 'middle', dominantBaseline: 'middle',
-        fontSize: 9.5, fill: 'rgba(255,255,255,0.8)', fontFamily: 'inherit',
-        style: { pointerEvents: 'none' }
+        key:`ts${key}_${li}`, x:cx, y:startY+(ll.length+li)*LINE_H,
+        textAnchor:'middle', dominantBaseline:'middle',
+        fontSize:9.5, fill:'rgba(255,255,255,0.8)', fontFamily:'inherit',
+        style:{pointerEvents:'none'}
       }, ln)));
+
+      // Step-number badge (col index + 1)
+      els.push(
+        e('circle', { key:`${key}nc`, cx:cx+NODE_W/2-6, cy:cy-NODE_H/2-6, r:9, fill:'#1e293b', stroke:'#f8fafc', strokeWidth:2, style:{pointerEvents:'none'} }),
+        e('text', { key:`${key}nt`, x:cx+NODE_W/2-6, y:cy-NODE_H/2-6, textAnchor:'middle', dominantBaseline:'middle', fontSize:8.5, fontWeight:700, fill:'white', fontFamily:'inherit', style:{pointerEvents:'none'} }, String(colIdx+1))
+      );
     });
 
-    // legend bottom-right
-    const legX = LEFT_PAD + 4, legY = svgH - BOT_PAD + 10;
+    // Legend
+    const legX = LEFT_PAD + 4, legY = svgH - BOT_PAD + 12;
     els.push(
-      e('line', { key: 'lg1l', x1: legX, y1: legY, x2: legX + 22, y2: legY, stroke: '#334155', strokeWidth: 1.5, strokeDasharray: '7,4', markerEnd: `url(#${mkS})` }),
-      e('text', { key: 'lg1t', x: legX + 26, y: legY, dominantBaseline: 'middle', fontSize: 9.5, fill: '#64748b', fontFamily: 'inherit' }, 'sequential'),
-      e('line', { key: 'lg2l', x1: legX + 100, y1: legY, x2: legX + 122, y2: legY, stroke: '#94a3b8', strokeWidth: 1.5, strokeDasharray: '4,3', markerEnd: `url(#${mkT})` }),
-      e('text', { key: 'lg2t', x: legX + 126, y: legY, dominantBaseline: 'middle', fontSize: 9.5, fill: '#64748b', fontFamily: 'inherit' }, 'triggers')
+      e('line', { key:'lg1l', x1:legX, y1:legY, x2:legX+22, y2:legY, stroke:'#334155', strokeWidth:1.5, strokeDasharray:'7,4', markerEnd:`url(#${mkS})` }),
+      e('text', { key:'lg1t', x:legX+26, y:legY, dominantBaseline:'middle', fontSize:9.5, fill:'#64748b', fontFamily:'inherit' }, 'sequential'),
+      e('line', { key:'lg2l', x1:legX+102, y1:legY, x2:legX+124, y2:legY, stroke:'#94a3b8', strokeWidth:1.5, strokeDasharray:'4,3', markerEnd:`url(#${mkT})` }),
+      e('text', { key:'lg2t', x:legX+128, y:legY, dominantBaseline:'middle', fontSize:9.5, fill:'#64748b', fontFamily:'inherit' }, 'triggers'),
+      e('circle', { key:'lgnum', cx:legX+228, cy:legY, r:8, fill:'#1e293b', style:{pointerEvents:'none'} }),
+      e('text', { key:'lgnumt', x:legX+228, y:legY, textAnchor:'middle', dominantBaseline:'middle', fontSize:8, fontWeight:700, fill:'white', fontFamily:'inherit', style:{pointerEvents:'none'} }, 'n'),
+      e('text', { key:'lgnuml', x:legX+240, y:legY, dominantBaseline:'middle', fontSize:9.5, fill:'#64748b', fontFamily:'inherit' }, 'step #')
     );
 
     return e('div', { style: { overflowX: 'auto' } },
@@ -911,8 +962,8 @@ function App() {
 
       e('div', { className: 'panel-label', style: { marginTop: 6 } }, 'Description'),
       e('textarea', {
-        className: 'inp', value: step.desc || '', rows: 4,
-        style: { resize: 'vertical', lineHeight: 1.5 },
+        className: 'inp', value: step.desc || '', rows: 5,
+        style: { resize: 'vertical', lineHeight: 1.6, minHeight: '100px' },
         onChange: ev => updateEditField('desc', ev.target.value)
       }),
 
