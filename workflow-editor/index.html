@@ -301,7 +301,7 @@ body { font-family: var(--font); font-size: 13px; color: var(--text); display: f
 <script>
 const { useState, useRef, useEffect, useCallback } = React;
 
-const STORAGE_KEY = 'theray-workflow-v1';
+const STORAGE_KEY = 'theray-workflow-v2';
 const PAT_KEY     = 'theray-workflow-pat';
 const GH_REPO     = 'CultivateGeospatial/theray';
 const GH_BRANCH   = 'ERD_Editor';
@@ -323,11 +323,39 @@ const LEGEND_ITEMS = [
   { id: 'process', label: 'Processing VM / ArcGIS' },
 ];
 
+// Migrate old lane-first format (steps[]) → column-first (columns[]) if needed
+function migrateModel(model) {
+  if (!model || !model.phases) return model;
+  return {
+    ...model,
+    phases: model.phases.map(ph => ({
+      ...ph,
+      flows: ph.flows.map(fl => {
+        if (fl.columns) return fl; // already new format
+        const lanes = fl.lanes || [];
+        const maxSteps = Math.max(0, ...lanes.map(ln => (ln.steps || []).length));
+        const columns = Array.from({ length: maxSteps }, (_, i) => ({
+          id: `col_${i}`,
+          cells: Object.fromEntries(lanes.map(ln => {
+            const s = (ln.steps || [])[i];
+            return [ln.id, s ? { ...s, async: s.async ?? false } : null];
+          }))
+        }));
+        return {
+          ...fl,
+          lanes: lanes.map(ln => ({ id: ln.id, label: ln.label, sublabel: ln.sublabel || '' })),
+          columns
+        };
+      })
+    }))
+  };
+}
+
 async function fetchModel() {
   for (const url of ['./working.json', './default.json']) {
     try {
       const res = await fetch(url);
-      if (res.ok) return await res.json();
+      if (res.ok) return migrateModel(await res.json());
     } catch(e) {}
   }
   return { phases: [] };
@@ -387,7 +415,7 @@ function App() {
     (async () => {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) { setModel(JSON.parse(raw)); return; }
+        if (raw) { setModel(migrateModel(JSON.parse(raw))); return; }
       } catch(e) {}
       setModel(await fetchModel());
     })();
