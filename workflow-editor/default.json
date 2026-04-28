@@ -56,6 +56,36 @@
                   ],
                   "async": false
                 },
+                "api": null,
+                "data": null,
+                "process": null
+              }
+            },
+            {
+              "id": "col_1",
+              "cells": {
+                "admin": {
+                  "key": "create-tenant",
+                  "label": "Create DOT Workspace",
+                  "sublabel": "State code, subdomain, schema",
+                  "badge": "Tenant Setup",
+                  "badgeColor": "#0273B5",
+                  "desc": "Minimum config to bring a new state DOT online. This record drives subdomain routing and all downstream isolation.",
+                  "items": [
+                    "state_code: 2-letter FIPS (PA, TX, etc.)",
+                    "subdomain: penndot → penndot.corridor-iq.org",
+                    "schema_name: tenant-isolated PostgreSQL schema",
+                    "Custom DOT domains also supported (e.g., ciq.penndot.org)"
+                  ],
+                  "tags": [
+                    "DOT_WORKSPACES",
+                    "PostgreSQL schema-per-tenant"
+                  ],
+                  "connectors": [
+                    "config-layers"
+                  ],
+                  "async": false
+                },
                 "api": {
                   "key": "api-provision",
                   "label": "Provision Tenant Schema",
@@ -101,75 +131,6 @@
                   "connectors": [],
                   "async": false
                 },
-                "process": {
-                  "key": "arcgis-group",
-                  "label": "Portal Group Created",
-                  "sublabel": "Scoped to tenant; image service registered",
-                  "badge": "ArcGIS Enterprise",
-                  "badgeColor": "#dc2626",
-                  "desc": "ArcGIS-level content scoping boundary. All content shared to this group is only accessible to group members.",
-                  "items": [
-                    "Group = tenant boundary inside ArcGIS Enterprise",
-                    "Service account manages membership",
-                    "One Image Service per workspace registered to this group",
-                    "No DOT users are ever direct Portal users"
-                  ],
-                  "tags": [
-                    "ArcGIS Portal",
-                    "Groups API"
-                  ],
-                  "connectors": [],
-                  "async": false
-                }
-              }
-            },
-            {
-              "id": "col_1",
-              "cells": {
-                "admin": {
-                  "key": "create-tenant",
-                  "label": "Create DOT Workspace",
-                  "sublabel": "State code, subdomain, schema",
-                  "badge": "Tenant Setup",
-                  "badgeColor": "#0273B5",
-                  "desc": "Minimum config to bring a new state DOT online. This record drives subdomain routing and all downstream isolation.",
-                  "items": [
-                    "state_code: 2-letter FIPS (PA, TX, etc.)",
-                    "subdomain: penndot → penndot.corridor-iq.org",
-                    "schema_name: tenant-isolated PostgreSQL schema",
-                    "Custom DOT domains also supported (e.g., ciq.penndot.org)"
-                  ],
-                  "tags": [
-                    "DOT_WORKSPACES",
-                    "PostgreSQL schema-per-tenant"
-                  ],
-                  "connectors": [
-                    "config-layers"
-                  ],
-                  "async": false
-                },
-                "api": {
-                  "key": "api-layers",
-                  "label": "Seed Layer Config",
-                  "sublabel": "Writes DATASET_CONFIGS rows",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "Stores initial DATASET_CONFIGS rows in the new tenant schema from a default template.",
-                  "items": [
-                    "Seeded from default config template per analysis type",
-                    "Admin can customize before finalizing onboarding",
-                    "WORKSPACE_LAYER_PERMISSIONS records created for default layers"
-                  ],
-                  "tags": [
-                    "DATASET_CONFIGS",
-                    "WORKSPACE_LAYER_PERMISSIONS"
-                  ],
-                  "connectors": [
-                    "api-portal-group"
-                  ],
-                  "async": false
-                },
-                "data": null,
                 "process": null
               }
             },
@@ -199,23 +160,24 @@
                   "async": false
                 },
                 "api": {
-                  "key": "api-portal-group",
-                  "label": "Register Portal Group",
-                  "sublabel": "Server-side ArcGIS REST call",
+                  "key": "api-layers",
+                  "label": "Seed Layer Config",
+                  "sublabel": "Writes DATASET_CONFIGS rows",
                   "badge": ".NET API",
                   "badgeColor": "#7c3aed",
-                  "desc": "Server-side ArcGIS REST call to create the tenant Portal group.",
+                  "desc": "Stores initial DATASET_CONFIGS rows in the new tenant schema from a default template.",
                   "items": [
-                    "Uses ArcGIS REST API (server-side, not user-facing OAuth)",
-                    "Returns portal_group_id stored on DOT_WORKSPACES",
-                    "Group is linked to tenant image service (image_service_id)"
+                    "Seeded from default config template per analysis type",
+                    "Admin can customize before finalizing onboarding",
+                    "WORKSPACE_LAYER_PERMISSIONS records created for default layers"
                   ],
                   "tags": [
-                    "ArcGIS REST API",
-                    "AzureIdentity",
-                    "Service Account"
+                    "DATASET_CONFIGS",
+                    "WORKSPACE_LAYER_PERMISSIONS"
                   ],
-                  "connectors": [],
+                  "connectors": [
+                    "api-portal-group"
+                  ],
                   "async": false
                 },
                 "data": null,
@@ -245,9 +207,47 @@
                   "connectors": [],
                   "async": false
                 },
-                "api": null,
+                "api": {
+                  "key": "api-portal-group",
+                  "label": "Register Portal Group",
+                  "sublabel": "Server-side ArcGIS REST call",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "Server-side ArcGIS REST call to create the tenant Portal group.",
+                  "items": [
+                    "Uses ArcGIS REST API (server-side, not user-facing OAuth)",
+                    "Returns portal_group_id stored on DOT_WORKSPACES",
+                    "Group is linked to tenant image service (image_service_id)"
+                  ],
+                  "tags": [
+                    "ArcGIS REST API",
+                    "AzureIdentity",
+                    "Service Account"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
                 "data": null,
-                "process": null
+                "process": {
+                  "key": "arcgis-group",
+                  "label": "Portal Group Created",
+                  "sublabel": "Scoped to tenant; image service registered",
+                  "badge": "ArcGIS Enterprise",
+                  "badgeColor": "#dc2626",
+                  "desc": "ArcGIS-level content scoping boundary. All content shared to this group is only accessible to group members.",
+                  "items": [
+                    "Group = tenant boundary inside ArcGIS Enterprise",
+                    "Service account manages membership",
+                    "One Image Service per workspace registered to this group",
+                    "No DOT users are ever direct Portal users"
+                  ],
+                  "tags": [
+                    "ArcGIS Portal",
+                    "Groups API"
+                  ],
+                  "connectors": [],
+                  "async": false
+                }
               }
             }
           ]
