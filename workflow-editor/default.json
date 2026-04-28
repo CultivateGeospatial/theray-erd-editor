@@ -900,6 +900,35 @@
                   ],
                   "async": false
                 },
+                "api": null,
+                "data": null,
+                "process": null
+              }
+            },
+            {
+              "id": "col_1",
+              "cells": {
+                "user": {
+                  "key": "user-upload",
+                  "label": "Select & Upload File",
+                  "sublabel": "DEM, GeoTIFF, vector format",
+                  "badge": "DOT User",
+                  "badgeColor": "#16a34a",
+                  "desc": "DOT users can upload their own elevation or vector data to use in analysis alongside default layers.",
+                  "items": [
+                    "DEM, GeoTIFF, vector formats (exact support TBD)",
+                    "File streamed to Blob via API",
+                    "User sees upload progress + status badge"
+                  ],
+                  "tags": [
+                    "File upload",
+                    "CUSTOMER_UPLOADS"
+                  ],
+                  "connectors": [
+                    "user-notify"
+                  ],
+                  "async": false
+                },
                 "api": {
                   "key": "api-upload-validate",
                   "label": "Validate + Stream to Blob",
@@ -944,53 +973,29 @@
                   ],
                   "async": false
                 },
-                "process": {
-                  "key": "vm-boot",
-                  "label": "VM Boots",
-                  "sublabel": "Azure starts VM; Windows Service starts automatically",
-                  "badge": "Processing VM",
-                  "badgeColor": "#dc2626",
-                  "desc": "Azure starts the Processing VM in response to the Compute API call. Once booted, the Windows Service that manages upload processing starts automatically.",
-                  "items": [
-                    "Azure VM boot time: typically 1–3 minutes",
-                    "Windows Service configured to start automatically on boot (Services panel)",
-                    "Service immediately begins polling on startup",
-                    "VM stays running until all pending records are processed, then idles / deallocates"
-                  ],
-                  "tags": [
-                    "Azure VM",
-                    "Windows Service autostart",
-                    "1–3 min boot time"
-                  ],
-                  "connectors": [
-                    "vm-poll"
-                  ],
-                  "async": false
-                }
+                "process": null
               }
             },
             {
-              "id": "col_1",
+              "id": "col_2",
               "cells": {
                 "user": {
-                  "key": "user-upload",
-                  "label": "Select & Upload File",
-                  "sublabel": "DEM, GeoTIFF, vector format",
+                  "key": "user-notify",
+                  "label": "Layer Ready",
+                  "sublabel": "Available in scenario weight config",
                   "badge": "DOT User",
                   "badgeColor": "#16a34a",
-                  "desc": "DOT users can upload their own elevation or vector data to use in analysis alongside default layers.",
+                  "desc": "Once processing is complete, the user is notified and the custom layer becomes available in scenario configuration.",
                   "items": [
-                    "DEM, GeoTIFF, vector formats (exact support TBD)",
-                    "File streamed to Blob via API",
-                    "User sees upload progress + status badge"
+                    "UI polls CUSTOMER_UPLOADS status (or WebSocket push — TBD)",
+                    "Custom layer appears in scenario weight panel",
+                    "Marked as user-provided (distinct from default layers)"
                   ],
                   "tags": [
-                    "File upload",
-                    "CUSTOMER_UPLOADS"
+                    "Polling / WebSocket TBD",
+                    "status: complete"
                   ],
-                  "connectors": [
-                    "user-notify"
-                  ],
+                  "connectors": [],
                   "async": false
                 },
                 "api": {
@@ -1035,6 +1040,66 @@
                   "connectors": [],
                   "async": false
                 },
+                "process": null
+              }
+            },
+            {
+              "id": "col_3",
+              "cells": {
+                "user": null,
+                "api": {
+                  "key": "api-vm-start",
+                  "label": "Start Processing VM",
+                  "sublabel": "Azure Compute API — start VM if not running",
+                  "badge": ".NET API",
+                  "badgeColor": "#7c3aed",
+                  "desc": "After creating the CUSTOMER_UPLOADS record, the .NET API calls the Azure Compute API to start the Processing VM if it is not already running. This keeps the VM off when idle to reduce cost.",
+                  "items": [
+                    "Calls Azure Compute API: Virtual Machines - Start",
+                    "If VM is already running (another job in progress), call is a no-op",
+                    "VM name / resource group stored in app config (per environment)",
+                    "API does not wait for VM to boot — it fires and returns immediately"
+                  ],
+                  "tags": [
+                    "Azure Compute API",
+                    "VM Start",
+                    "Cost optimization"
+                  ],
+                  "connectors": [],
+                  "async": false
+                },
+                "data": null,
+                "process": {
+                  "key": "vm-boot",
+                  "label": "VM Boots",
+                  "sublabel": "Azure starts VM; Windows Service starts automatically",
+                  "badge": "Processing VM",
+                  "badgeColor": "#dc2626",
+                  "desc": "Azure starts the Processing VM in response to the Compute API call. Once booted, the Windows Service that manages upload processing starts automatically.",
+                  "items": [
+                    "Azure VM boot time: typically 1–3 minutes",
+                    "Windows Service configured to start automatically on boot (Services panel)",
+                    "Service immediately begins polling on startup",
+                    "VM stays running until all pending records are processed, then idles / deallocates"
+                  ],
+                  "tags": [
+                    "Azure VM",
+                    "Windows Service autostart",
+                    "1–3 min boot time"
+                  ],
+                  "connectors": [
+                    "vm-poll"
+                  ],
+                  "async": false
+                }
+              }
+            },
+            {
+              "id": "col_4",
+              "cells": {
+                "user": null,
+                "api": null,
+                "data": null,
                 "process": {
                   "key": "vm-poll",
                   "label": "Windows Service Polls DB",
@@ -1060,48 +1125,10 @@
               }
             },
             {
-              "id": "col_2",
+              "id": "col_5",
               "cells": {
-                "user": {
-                  "key": "user-notify",
-                  "label": "Layer Ready",
-                  "sublabel": "Available in scenario weight config",
-                  "badge": "DOT User",
-                  "badgeColor": "#16a34a",
-                  "desc": "Once processing is complete, the user is notified and the custom layer becomes available in scenario configuration.",
-                  "items": [
-                    "UI polls CUSTOMER_UPLOADS status (or WebSocket push — TBD)",
-                    "Custom layer appears in scenario weight panel",
-                    "Marked as user-provided (distinct from default layers)"
-                  ],
-                  "tags": [
-                    "Polling / WebSocket TBD",
-                    "status: complete"
-                  ],
-                  "connectors": [],
-                  "async": false
-                },
-                "api": {
-                  "key": "api-vm-start",
-                  "label": "Start Processing VM",
-                  "sublabel": "Azure Compute API — start VM if not running",
-                  "badge": ".NET API",
-                  "badgeColor": "#7c3aed",
-                  "desc": "After creating the CUSTOMER_UPLOADS record, the .NET API calls the Azure Compute API to start the Processing VM if it is not already running. This keeps the VM off when idle to reduce cost.",
-                  "items": [
-                    "Calls Azure Compute API: Virtual Machines - Start",
-                    "If VM is already running (another job in progress), call is a no-op",
-                    "VM name / resource group stored in app config (per environment)",
-                    "API does not wait for VM to boot — it fires and returns immediately"
-                  ],
-                  "tags": [
-                    "Azure Compute API",
-                    "VM Start",
-                    "Cost optimization"
-                  ],
-                  "connectors": [],
-                  "async": false
-                },
+                "user": null,
+                "api": null,
                 "data": null,
                 "process": {
                   "key": "vm-download",
@@ -1129,7 +1156,7 @@
               }
             },
             {
-              "id": "col_3",
+              "id": "col_6",
               "cells": {
                 "user": null,
                 "api": null,
@@ -1160,7 +1187,7 @@
               }
             },
             {
-              "id": "col_4",
+              "id": "col_7",
               "cells": {
                 "user": null,
                 "api": null,
@@ -1191,7 +1218,7 @@
               }
             },
             {
-              "id": "col_5",
+              "id": "col_8",
               "cells": {
                 "user": null,
                 "api": null,
