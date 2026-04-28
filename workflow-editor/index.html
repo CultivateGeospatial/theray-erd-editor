@@ -89,8 +89,18 @@ body { font-family: var(--font); font-size: 13px; color: var(--text); display: f
 .flow-header {
   background: #f8fafc; border: 1px solid var(--border); border-radius: 8px;
   padding: 8px 16px; margin-bottom: 10px; font-size: 12px; color: var(--muted);
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px; justify-content: space-between;
 }
+
+/* ── Flow diagram view toggle ── */
+.flow-view-toggle { display: flex; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; flex-shrink: 0; }
+.fv-btn {
+  background: var(--bg); color: var(--muted); border: none; padding: 3px 10px;
+  cursor: pointer; font-size: 11px; font-weight: 500; font-family: var(--font);
+  transition: background 0.15s, color 0.15s; white-space: nowrap; line-height: 1.5;
+}
+.fv-btn.active { background: var(--cgs-blue); color: white; }
+.fv-btn:not(.active):hover { background: var(--border); }
 .flow-header-label { font-weight: 700; }
 
 /* ── Swimlanes ── */
@@ -413,6 +423,7 @@ function App() {
   const [showGhMenu,  setShowGhMenu]  = useState(false);
   const [newTagVal,   setNewTagVal]   = useState('');
   const [newItemVal,  setNewItemVal]  = useState('');
+  const [flowViewMode,setFlowViewMode]= useState({}); // `${phaseIdx}-${flowIdx}` => 'swimlane'|'flowchart'
 
   useEffect(() => {
     (async () => {
@@ -669,23 +680,193 @@ function App() {
     );
   };
 
+  // ── Flow diagram (SVG flowchart) ──
+  const renderFlowChart = (flow, phaseIdx, flowIdx) => {
+    const lanes   = flow.lanes   || [];
+    const columns = flow.columns || [];
+
+    const COL_W = 210, ROW_H = 105, NODE_W = 170, NODE_H = 64;
+    const LEFT_PAD = 140, TOP_PAD = 22, BOT_PAD = 22, RIGHT_PAD = 20;
+    const LINE_H = 14;
+
+    const svgW = LEFT_PAD + Math.max(columns.length, 1) * COL_W + RIGHT_PAD;
+    const svgH = TOP_PAD + lanes.length * ROW_H + BOT_PAD;
+
+    function wrapText(str, maxCh) {
+      if (!str) return [];
+      const words = str.split(' ');
+      const lines = []; let cur = '';
+      for (const w of words) {
+        const next = cur ? cur + ' ' + w : w;
+        if (next.length <= maxCh) { cur = next; }
+        else { if (cur) lines.push(cur); cur = w.length > maxCh ? w.slice(0, maxCh - 1) + '…' : w; }
+      }
+      if (cur) lines.push(cur);
+      return lines.slice(0, 2);
+    }
+
+    // Build node map: key=`laneId_colId` => position + step data
+    const nodePos = {};
+    lanes.forEach((lane, li) => {
+      columns.forEach((col, ci) => {
+        const cell = col.cells[lane.id];
+        if (cell) nodePos[`${lane.id}_${col.id}`] = {
+          cx: LEFT_PAD + ci * COL_W + COL_W / 2,
+          cy: TOP_PAD + li * ROW_H + ROW_H / 2,
+          step: cell, colIdx: ci, laneId: lane.id
+        };
+      });
+    });
+
+    // Sequential edges: same lane, consecutive non-null columns
+    const seqEdges = [];
+    lanes.forEach(lane => {
+      let prev = null;
+      columns.forEach(col => {
+        const k = `${lane.id}_${col.id}`;
+        if (nodePos[k]) { if (prev) seqEdges.push({ from: prev, to: k }); prev = k; }
+      });
+    });
+
+    // Trigger edges: same column, multiple lanes — shows what one action cascades to
+    const trigEdges = [];
+    columns.forEach(col => {
+      const present = lanes
+        .map(ln => `${ln.id}_${col.id}`)
+        .filter(k => nodePos[k]);
+      for (let i = 0; i < present.length - 1; i++)
+        trigEdges.push({ from: present[i], to: present[i + 1] });
+    });
+
+    const mkS = `aS${phaseIdx}_${flowIdx}`, mkT = `aT${phaseIdx}_${flowIdx}`;
+    const els = [];
+
+    // Arrow markers
+    els.push(e('defs', { key: 'defs' },
+      e('marker', { id: mkS, markerWidth: 8, markerHeight: 8, refX: 7, refY: 3, orient: 'auto' },
+        e('path', { d: 'M0,0 L0,6 L7,3 z', fill: '#0273B5' })),
+      e('marker', { id: mkT, markerWidth: 8, markerHeight: 8, refX: 7, refY: 3, orient: 'auto' },
+        e('path', { d: 'M0,0 L0,6 L7,3 z', fill: '#94a3b8' }))
+    ));
+
+    // Lane background bands + labels
+    lanes.forEach((lane, li) => {
+      const lc = LANE_COLORS[lane.id] || { color: '#64748b', bg: '#f8fafc' };
+      const y = TOP_PAD + li * ROW_H;
+      els.push(
+        e('rect',  { key: `bg${li}`, x: 0, y, width: svgW, height: ROW_H, fill: lc.bg, opacity: 0.4 }),
+        e('line',  { key: `bd${li}`, x1: 0, y1: y + ROW_H, x2: svgW, y2: y + ROW_H, stroke: '#e2e8f0', strokeWidth: 1 }),
+        e('text',  { key: `lt${li}`, x: 12, y: y + ROW_H / 2 - (lane.sublabel ? 7 : 0), dominantBaseline: 'middle', fontSize: 11.5, fontWeight: 700, fill: lc.color, fontFamily: 'inherit' }, lane.label)
+      );
+      if (lane.sublabel) els.push(
+        e('text', { key: `ls${li}`, x: 12, y: y + ROW_H / 2 + 8, dominantBaseline: 'middle', fontSize: 10, fill: lc.color, opacity: 0.65, fontFamily: 'inherit' }, lane.sublabel)
+      );
+    });
+
+    // Divider between labels and diagram
+    els.push(e('line', { key: 'sep', x1: LEFT_PAD - 2, y1: 0, x2: LEFT_PAD - 2, y2: svgH, stroke: '#d1d5db', strokeWidth: 2 }));
+
+    // Subtle column guides
+    columns.forEach((_, ci) => {
+      if (ci > 0) els.push(
+        e('line', { key: `cg${ci}`, x1: LEFT_PAD + ci * COL_W, y1: TOP_PAD, x2: LEFT_PAD + ci * COL_W, y2: svgH - BOT_PAD, stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '3,5' })
+      );
+    });
+
+    // Sequential arrows (solid blue, within a lane)
+    seqEdges.forEach((edge, i) => {
+      const f = nodePos[edge.from], t = nodePos[edge.to];
+      if (!f || !t) return;
+      els.push(e('line', { key: `se${i}`, x1: f.cx + NODE_W / 2, y1: f.cy, x2: t.cx - NODE_W / 2 - 1, y2: t.cy, stroke: '#0273B5', strokeWidth: 1.5, markerEnd: `url(#${mkS})` }));
+    });
+
+    // Trigger arrows (dashed gray, same column → cross-lane cascade)
+    trigEdges.forEach((edge, i) => {
+      const f = nodePos[edge.from], t = nodePos[edge.to];
+      if (!f || !t) return;
+      els.push(e('line', { key: `te${i}`, x1: f.cx, y1: f.cy + NODE_H / 2 + 2, x2: t.cx, y2: t.cy - NODE_H / 2 - 2, stroke: '#94a3b8', strokeWidth: 1.5, strokeDasharray: '4,3', markerEnd: `url(#${mkT})` }));
+    });
+
+    // Nodes
+    Object.entries(nodePos).forEach(([key, np]) => {
+      const { cx, cy, step, colIdx, laneId } = np;
+      const lc = LANE_COLORS[laneId] || { color: '#64748b', bg: '#f8fafc' };
+      const ll = wrapText(step.label || '', 23);
+      const sl = step.sublabel ? wrapText(step.sublabel, 28) : [];
+      const total = ll.length + sl.length;
+      const startY = cy - ((total - 1) * LINE_H) / 2;
+      const isSel = editCtx &&
+        editCtx.phaseIdx === phaseIdx && editCtx.flowIdx === flowIdx &&
+        editCtx.colIdx === colIdx && editCtx.laneId === laneId;
+
+      els.push(e('rect', {
+        key: `r${key}`,
+        x: cx - NODE_W / 2, y: cy - NODE_H / 2, width: NODE_W, height: NODE_H, rx: 8,
+        fill: 'white', stroke: lc.color, strokeWidth: isSel ? 3 : 2,
+        style: { cursor: 'pointer', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.09))' },
+        onClick: () => handleStepClick(phaseIdx, flowIdx, colIdx, laneId, step)
+      }));
+      ll.forEach((ln, li) => els.push(e('text', {
+        key: `tl${key}_${li}`, x: cx, y: startY + li * LINE_H,
+        textAnchor: 'middle', dominantBaseline: 'middle',
+        fontSize: 11, fontWeight: 700, fill: '#1e293b', fontFamily: 'inherit',
+        style: { pointerEvents: 'none' }
+      }, ln)));
+      sl.forEach((ln, li) => els.push(e('text', {
+        key: `ts${key}_${li}`, x: cx, y: startY + (ll.length + li) * LINE_H,
+        textAnchor: 'middle', dominantBaseline: 'middle',
+        fontSize: 9.5, fill: '#64748b', fontFamily: 'inherit',
+        style: { pointerEvents: 'none' }
+      }, ln)));
+    });
+
+    // Legend (bottom-right)
+    const legX = svgW - 200, legY = svgH - BOT_PAD + 4;
+    els.push(
+      e('line', { key: 'leg1', x1: legX, y1: legY + 5, x2: legX + 18, y2: legY + 5, stroke: '#0273B5', strokeWidth: 1.5, markerEnd: `url(#${mkS})` }),
+      e('text',  { key: 'leg1t', x: legX + 22, y: legY + 5, dominantBaseline: 'middle', fontSize: 9.5, fill: '#64748b', fontFamily: 'inherit' }, 'sequential'),
+      e('line', { key: 'leg2', x1: legX + 100, y1: legY + 5, x2: legX + 118, y2: legY + 5, stroke: '#94a3b8', strokeWidth: 1.5, strokeDasharray: '4,3', markerEnd: `url(#${mkT})` }),
+      e('text',  { key: 'leg2t', x: legX + 122, y: legY + 5, dominantBaseline: 'middle', fontSize: 9.5, fill: '#64748b', fontFamily: 'inherit' }, 'triggers')
+    );
+
+    return e('div', { style: { overflowX: 'auto', background: 'white', border: '1px solid var(--border)', borderRadius: 10 } },
+      e('svg', { width: svgW, height: svgH, style: { display: 'block', fontFamily: 'var(--font)' } }, ...els)
+    );
+  };
+
   const renderFlow = (flow, phaseIdx, flowIdx, isMultiFlow, isLast) => {
+    const vk = `${phaseIdx}-${flowIdx}`;
+    const viewMode = flowViewMode[vk] || 'swimlane';
     return e('div', { key: flow.id },
-      isMultiFlow && e('div', { className: 'flow-header' },
-        e('span', {
-          className: 'flow-header-label',
-          style: { color: flow.id === 'A' ? '#0273B5' : flow.id === 'B' ? '#16a34a' : '#64748b' }
-        }, `${flow.id} — ${flow.label || ''}`),
-        flow.description && e('span', null, flow.description)
-      ),
-      e('div', {
-        className: 'swimlane-wrap',
-        style: { marginBottom: isLast ? 0 : 16 }
-      },
-        e('div', { className: 'swimlane-scroll' },
-          flow.lanes.map(lane => renderLane(lane, phaseIdx, flowIdx, flow.columns))
+      e('div', { className: 'flow-header' },
+        isMultiFlow
+          ? e('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+              e('span', {
+                className: 'flow-header-label',
+                style: { color: flow.id === 'A' ? '#0273B5' : flow.id === 'B' ? '#16a34a' : '#64748b' }
+              }, `${flow.id} — ${flow.label || ''}`),
+              flow.description && e('span', null, flow.description)
+            )
+          : e('span', null),
+        e('div', { className: 'flow-view-toggle' },
+          e('button', {
+            className: `fv-btn${viewMode === 'swimlane' ? ' active' : ''}`,
+            onClick: () => setFlowViewMode(m => ({ ...m, [vk]: 'swimlane' }))
+          }, '⇆ Swimlane'),
+          e('button', {
+            className: `fv-btn${viewMode === 'flowchart' ? ' active' : ''}`,
+            onClick: () => setFlowViewMode(m => ({ ...m, [vk]: 'flowchart' }))
+          }, '◇ Flow Diagram')
         )
-      )
+      ),
+      viewMode === 'flowchart'
+        ? e('div', { style: { marginBottom: isLast ? 0 : 16 } },
+            renderFlowChart(flow, phaseIdx, flowIdx))
+        : e('div', { className: 'swimlane-wrap', style: { marginBottom: isLast ? 0 : 16 } },
+            e('div', { className: 'swimlane-scroll' },
+              flow.lanes.map(lane => renderLane(lane, phaseIdx, flowIdx, flow.columns))
+            )
+          )
     );
   };
 
